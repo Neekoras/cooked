@@ -1,0 +1,645 @@
+/* Fonts loaded via <link> in content.js */
+
+/* ─── Scoped reset — only affects .ck-* elements ─────────────────────── */
+.ck-root *, .ck-root *::before, .ck-root *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.ck-root {
+  --bg:        #0B0D14;
+  --surface:   #13161F;
+  --surface-2: #1A1D28;
+  --border:    #252836;
+  --border-2:  #2E3244;
+  --accent:    #C9A84C;
+  --accent-dim:rgba(201, 168, 76, 0.14);
+  --accent-low:rgba(201, 168, 76, 0.06);
+  --text:      #EEF0F6;
+  --text-2:    #7E8499;
+  --text-3:    #4A4F66;
+  --red:       #E05252;
+  --red-dim:   rgba(224, 82, 82, 0.12);
+  --green:     #52A878;
+  --green-dim: rgba(82, 168, 120, 0.12);
+  --yellow:    #D4A732;
+  --yellow-dim:rgba(212, 167, 50, 0.12);
+
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Toggle tab ──────────────────────────────────────────────────────── */
+.ck-tab {
+  pointer-events: auto;
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 2147483646;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 24px;
+  height: 80px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  cursor: pointer;
+  transition: background 150ms, border-color 150ms, right 300ms cubic-bezier(0.4,0,0.2,1);
+
+  /* Vertical text */
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  user-select: none;
+}
+
+.ck-tab:hover {
+  background: var(--surface-2);
+  border-color: var(--border-2);
+}
+
+.ck-tab.is-open {
+  right: 360px;
+}
+
+/* ─── Sidebar panel ───────────────────────────────────────────────────── */
+.ck-panel {
+  pointer-events: auto;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 360px;
+  height: 100vh;
+  z-index: 2147483645;
+
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  box-shadow: -12px 0 48px rgba(0,0,0,0.55);
+
+  transform: translateX(100%);
+  transition: transform 300ms cubic-bezier(0.4,0,0.2,1);
+  overflow: hidden;
+}
+
+.ck-panel.is-open {
+  transform: translateX(0);
+}
+
+/* ─── Scrollable body ─────────────────────────────────────────────────── */
+.ck-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-2) transparent;
+}
+
+.ck-scroll::-webkit-scrollbar { width: 3px; }
+.ck-scroll::-webkit-scrollbar-track { background: transparent; }
+.ck-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border-radius: 2px;
+}
+
+/* ─── Header ──────────────────────────────────────────────────────────── */
+.ck-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.ck-wordmark {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 16px;
+}
+
+/* ─── Grade display ───────────────────────────────────────────────────── */
+.ck-grade-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.ck-grade-pct {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.ck-grade-letter {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.ck-grade-meta {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+/* ─── Discrepancy banner ──────────────────────────────────────────────── */
+.ck-discrepancy {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--yellow-dim);
+  border: 1px solid rgba(212,167,50,0.22);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--yellow);
+  line-height: 1.45;
+}
+
+.ck-discrepancy strong {
+  font-weight: 600;
+}
+
+/* ─── Target input ────────────────────────────────────────────────────── */
+.ck-target-section {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.ck-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 7px;
+}
+
+.ck-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 120ms;
+  -webkit-appearance: none;
+}
+
+.ck-input:focus {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+
+.ck-input::placeholder {
+  color: var(--text-3);
+}
+
+.ck-input-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* ─── Tab bar ─────────────────────────────────────────────────────────── */
+.ck-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg);
+}
+
+.ck-tab-btn {
+  flex: 1;
+  height: 38px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-3);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 120ms, border-color 120ms;
+  white-space: nowrap;
+}
+
+.ck-tab-btn:hover {
+  color: var(--text-2);
+}
+
+.ck-tab-btn.is-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+/* ─── Section header inside scroll ───────────────────────────────────── */
+.ck-section-title {
+  padding: 14px 20px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* ─── Breakdown table ─────────────────────────────────────────────────── */
+.ck-group {
+  border-bottom: 1px solid var(--border);
+}
+
+.ck-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: var(--surface);
+  cursor: pointer;
+  user-select: none;
+  gap: 8px;
+}
+
+.ck-group-header:hover {
+  background: var(--surface-2);
+}
+
+.ck-group-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ck-group-weight {
+  font-size: 11px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+.ck-group-score {
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.ck-chevron {
+  font-size: 10px;
+  color: var(--text-3);
+  flex-shrink: 0;
+  transition: transform 150ms;
+}
+
+.ck-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+/* Assignment rows */
+.ck-assignment {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 20px;
+  border-top: 1px solid var(--border);
+  transition: background 100ms;
+}
+
+.ck-assignment:hover {
+  background: rgba(255,255,255,0.015);
+}
+
+.ck-assignment.is-graded {
+  opacity: 0.55;
+}
+
+.ck-assignment.is-graded:hover {
+  opacity: 0.75;
+}
+
+.ck-assignment.is-dropped {
+  opacity: 0.3;
+}
+
+.ck-a-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ck-a-name .ck-a-due {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 1px;
+}
+
+.ck-a-score {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.ck-a-score .ck-a-needed {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 1px;
+  text-align: right;
+}
+
+/* ─── Status chips ────────────────────────────────────────────────────── */
+.ck-chip {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.ck-chip-impossible {
+  background: var(--red-dim);
+  color: var(--red);
+}
+
+.ck-chip-achieved {
+  background: var(--green-dim);
+  color: var(--green);
+}
+
+.ck-chip-high {
+  background: var(--yellow-dim);
+  color: var(--yellow);
+}
+
+.ck-chip-dropped {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-3);
+}
+
+/* ─── Panic mode ──────────────────────────────────────────────────────── */
+.ck-panic-body {
+  padding: 0 20px 20px;
+}
+
+.ck-select {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color 120ms;
+}
+
+.ck-select:focus {
+  border-color: var(--accent);
+}
+
+.ck-result-card {
+  margin-top: 16px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.ck-result-label {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-bottom: 8px;
+}
+
+.ck-result-number {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.ck-result-number.is-impossible {
+  color: var(--red);
+}
+
+.ck-result-number.is-achieved {
+  color: var(--green);
+}
+
+.ck-result-sub {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-bottom: 12px;
+}
+
+/* ─── Share card ──────────────────────────────────────────────────────── */
+.ck-share-body {
+  padding: 0 20px 20px;
+}
+
+.ck-card-preview {
+  padding: 24px;
+  background: #0E1018;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+.ck-card-preview::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%);
+  opacity: 0.5;
+}
+
+.ck-card-logo {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 18px;
+}
+
+.ck-card-headline {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.ck-card-sub {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.ck-card-url {
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+  font-size: 10px;
+  color: var(--text-3);
+  letter-spacing: 0.05em;
+}
+
+/* ─── Buttons ─────────────────────────────────────────────────────────── */
+.ck-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 16px;
+  background: var(--accent);
+  border: none;
+  border-radius: 4px;
+  color: #0F0F0F;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 120ms, transform 80ms;
+  white-space: nowrap;
+}
+
+.ck-btn:hover { opacity: 0.88; }
+.ck-btn:active { transform: scale(0.98); }
+
+.ck-btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+}
+
+.ck-btn-ghost:hover {
+  border-color: var(--border-2);
+  color: var(--text);
+  opacity: 1;
+}
+
+.ck-btn-row {
+  display: flex;
+  gap: 8px;
+}
+
+/* ─── Loading / error states ──────────────────────────────────────────── */
+.ck-loading {
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.ck-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: ck-spin 700ms linear infinite;
+}
+
+@keyframes ck-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ck-loading-text {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.ck-error {
+  padding: 32px 20px;
+  text-align: center;
+}
+
+.ck-error-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 16px;
+  color: var(--red);
+  margin-bottom: 8px;
+}
+
+.ck-error-body {
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.55;
+}
+
+/* ─── Empty state ─────────────────────────────────────────────────────── */
+.ck-empty {
+  padding: 28px 20px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.55;
+}
+
+/* ─── Utility ─────────────────────────────────────────────────────────── */
+.ck-divider {
+  height: 1px;
+  background: var(--border);
+}
+
+.ck-spacer-sm { height: 8px; }
+.ck-spacer-md { height: 16px; }
+
+.ck-mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
