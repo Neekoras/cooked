@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { solvePanic, percentToLetter } from '../math/gradeEngine';
+import { solvePanic, percentToLetter, isPanicEligible } from '../math/gradeEngine';
 
 export default function PanicMode({ groupResults, targetPercent, isWeighted }) {
   const [selectedId, setSelectedId] = useState('');
@@ -8,8 +8,10 @@ export default function PanicMode({ groupResults, targetPercent, isWeighted }) {
   const options = useMemo(() => {
     const list = [];
     for (const group of (groupResults || [])) {
-      for (const a of (group.remaining || [])) {
-        list.push({ id: String(a.id), name: a.name, groupName: group.name, pts: a.points_possible });
+      for (const a of (group.assignments || [])) {
+        if (isPanicEligible(a)) {
+          list.push({ id: String(a.id), name: a.name, groupName: group.name, pts: a.points_possible });
+        }
       }
     }
     return list;

@@ -7,6 +7,14 @@
 
 const PER_PAGE = 100;
 
+// In content-script mode, API URLs are relative (resolves to the Canvas origin).
+// In side-panel mode, we must use an absolute base URL.
+let _base = '';
+
+export function setApiBase(origin) {
+  _base = origin.replace(/\/$/, ''); // e.g. "https://sequoia.instructure.com"
+}
+
 /** Extract courseId from the current page URL. */
 export function getCourseId() {
   const match = window.location.pathname.match(/\/courses\/(\d+)\/grades/);
@@ -19,7 +27,7 @@ export function getCourseId() {
  */
 async function fetchPaged(url) {
   const results = [];
-  let next = url;
+  let next = url.startsWith('http') ? url : _base + url;
 
   while (next) {
     const res = await fetch(next, {
@@ -68,10 +76,10 @@ export async function fetchAssignmentGroups(courseId) {
 }
 
 /**
- * Fetch the course object to read apply_assignment_group_weights.
+ * Fetch the course object to read apply_assignment_group_weights and grading scheme.
  */
 export async function fetchCourse(courseId) {
-  const url = `/api/v1/courses/${courseId}`;
+  const url = `/api/v1/courses/${courseId}?include[]=grading_scheme`;
   return fetchPaged(url);
 }
 
@@ -99,6 +107,31 @@ export async function fetchEnrollmentGrade(courseId) {
 }
 
 /**
+ * Fetch all active student enrollments with current scores.
+ * Returns a sorted array of course objects annotated with currentScore / currentGrade.
+ */
+export async function fetchAllCourses() {
+  const url =
+    `/api/v1/courses` +
+    `?enrollment_type=student&enrollment_state=active` +
+    `&include[]=total_scores&per_page=100`;
+  const courses = await fetchPaged(url);
+  return courses
+    .filter(c => !c.access_restricted_by_date)
+    .map(c => {
+      const enrollment = Array.isArray(c.enrollments) ? c.enrollments[0] : null;
+      return {
+        id: c.id,
+        name: c.name,
+        courseCode: c.course_code,
+        currentScore: enrollment?.computed_current_score ?? null,
+        currentGrade: enrollment?.computed_current_grade ?? null,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
  * Load everything needed for the grade calculation in parallel.
  * Returns { groups, isWeighted, enrollmentGrade }.
  */
@@ -110,6 +143,7 @@ export async function loadCourseData(courseId) {
   ]);
 
   const isWeighted = Boolean(course?.apply_assignment_group_weights);
+  const gradingScheme = course?.grading_scheme ?? null;
 
-  return { groups, isWeighted, enrollmentGrade };
+  return { groups, isWeighted, enrollmentGrade, gradingScheme };
 }

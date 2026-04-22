@@ -6,6 +6,112 @@
  */
 
 // ---------------------------------------------------------------------------
+// GPA scale
+// ---------------------------------------------------------------------------
+
+export const GPA_SCALE = [
+  { min: 97, points: 4.0 },
+  { min: 93, points: 4.0 },
+  { min: 90, points: 3.7 },
+  { min: 87, points: 3.3 },
+  { min: 83, points: 3.0 },
+  { min: 80, points: 2.7 },
+  { min: 77, points: 2.3 },
+  { min: 73, points: 2.0 },
+  { min: 70, points: 1.7 },
+  { min: 67, points: 1.3 },
+  { min: 63, points: 1.0 },
+  { min: 60, points: 0.7 },
+  { min: 0,  points: 0.0 },
+];
+
+export function percentToGPA(pct) {
+  if (pct === null || pct === undefined) return null;
+  for (const { min, points } of GPA_SCALE) {
+    if (pct >= min) return points;
+  }
+  return 0.0;
+}
+
+/** Map a letter grade to GPA points (works for A, A-, B+, etc.) */
+const LETTER_GPA_MAP = {
+  'A+': 4.0, 'A': 4.0, 'A-': 3.7,
+  'B+': 3.3, 'B': 3.0, 'B-': 2.7,
+  'C+': 2.3, 'C': 2.0, 'C-': 1.7,
+  'D+': 1.3, 'D': 1.0, 'D-': 0.7,
+  'F': 0.0,
+};
+
+export function letterToGPA(letter) {
+  if (!letter) return null;
+  const up = String(letter).toUpperCase().trim();
+  return LETTER_GPA_MAP[up] ?? LETTER_GPA_MAP[up[0]] ?? null;
+}
+
+/**
+ * Normalize a Canvas grading scheme array into sorted {letter, minPct} entries.
+ * Canvas format: [{ name: 'A', value: 0.8 }, ...] where value is 0–1.
+ * Returns null if no valid scheme.
+ */
+export function normalizeGradingScheme(scheme) {
+  if (!Array.isArray(scheme) || scheme.length === 0) return null;
+  const sorted = [...scheme].sort((a, b) => b.value - a.value);
+  const maxVal = sorted[0].value;
+  // Canvas sends values as 0–1 decimals OR 1–100 percentages depending on the instance.
+  const alreadyPct = maxVal > 1;
+  const normalized = sorted.map(({ name, value }) => ({
+    letter: name,
+    minPct: alreadyPct ? value : value * 100,
+  }));
+  // If the top threshold ends up >= 100 (e.g. value was exactly 1.0 → *100 = 100),
+  // or no entry has a threshold above 50%, the scheme is malformed — fall back to
+  // the standard US scale so we never show F on a 94%.
+  if (normalized[0]?.minPct >= 100) return null;
+  if (!normalized.some(e => e.minPct > 50)) return null;
+  return normalized;
+}
+
+/** Convert percent to letter using a course-specific scheme (fallback: standard scale). */
+export function percentToLetterWithScheme(pct, normalizedScheme) {
+  if (!normalizedScheme) return percentToLetter(pct);
+  for (const { letter, minPct } of normalizedScheme) {
+    if (pct >= minPct) return letter;
+  }
+  return normalizedScheme[normalizedScheme.length - 1]?.letter ?? 'F';
+}
+
+/**
+ * Parse a letter grade or percentage string to a minimum percentage,
+ * using a course-specific scheme when available.
+ */
+export function letterToPercentWithScheme(input, normalizedScheme) {
+  if (!normalizedScheme) return letterToPercent(input);
+  const normalized = String(input).trim().toUpperCase();
+  const entry = normalizedScheme.find(e => e.letter.toUpperCase() === normalized);
+  if (entry) return entry.minPct;
+  const n = parseFloat(normalized);
+  return isNaN(n) ? null : n;
+}
+
+/**
+ * Calculate GPA from a list of courses.
+ * Uses Canvas's own letter grade (already scheme-aware) when available,
+ * falls back to computing from the raw score.
+ */
+export function calcGPA(courses) {
+  // courses: array of { currentScore, currentGrade }
+  const valid = courses.filter(c => c.currentScore !== null || c.currentGrade !== null);
+  if (valid.length === 0) return null;
+  const sum = valid.reduce((s, c) => {
+    const pts = c.currentGrade
+      ? (letterToGPA(c.currentGrade) ?? percentToGPA(c.currentScore))
+      : percentToGPA(c.currentScore);
+    return s + (pts ?? 0);
+  }, 0);
+  return sum / valid.length;
+}
+
+// ---------------------------------------------------------------------------
 // Letter grade mapping (standard US scale)
 // ---------------------------------------------------------------------------
 
@@ -76,6 +182,25 @@ export function isRemaining(assignment) {
   if (isExcused(assignment)) return false;
   if (isGraded(assignment)) return false;
   return (assignment.points_possible ?? 0) > 0;
+}
+
+/**
+ * Wider filter used for the Panic Mode dropdown.
+ * Includes "missing" assignments auto-graded as 0 by teachers — they show as
+ * graded in Canvas's API but the student hasn't actually done the work yet.
+ * These are identifiable by: workflow_state === 'graded' && score === 0 &&
+ * (late_policy_status === 'missing' OR missing === true).
+ */
+export function isPanicEligible(assignment) {
+  if (isExcused(assignment)) return false;
+  if ((assignment.points_possible ?? 0) === 0) return false;
+  if (isRemaining(assignment)) return true;
+  // Also include auto-graded missing assignments (score=0, flagged as missing)
+  const sub = assignment.submission;
+  if (!sub) return false;
+  const isMissing = sub.missing === true || sub.late_policy_status === 'missing';
+  const isZeroGraded = sub.workflow_state === 'graded' && sub.score === 0;
+  return isMissing || isZeroGraded;
 }
 
 // ---------------------------------------------------------------------------

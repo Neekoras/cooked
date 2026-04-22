@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { letterToPercent, percentToLetter } from '../math/gradeEngine';
+import { letterToPercentWithScheme, percentToLetterWithScheme } from '../math/gradeEngine';
 
-export default function TargetInput({ onChange }) {
+export default function TargetInput({ onChange, gradingScheme }) {
   const [value, setValue] = useState('');
   const [parsed, setParsed] = useState(null);
   const [error, setError] = useState(false);
@@ -13,24 +13,34 @@ export default function TargetInput({ onChange }) {
       onChange(null);
       return;
     }
-    const pct = letterToPercent(value);
-    if (pct === null || pct < 0 || pct > 105) {
+    try {
+      const pct = letterToPercentWithScheme(value, gradingScheme);
+      if (pct === null || pct < 0 || pct > 105) {
+        setParsed(null);
+        setError(true);
+        onChange(null);
+      } else {
+        setParsed(pct);
+        setError(false);
+        onChange(pct);
+      }
+    } catch {
       setParsed(null);
       setError(true);
       onChange(null);
-    } else {
-      setParsed(pct);
-      setError(false);
-      onChange(pct);
     }
-  }, [value]);
+  }, [value, gradingScheme]);
 
-  const hint =
-    parsed !== null
-      ? `${parsed}% — ${percentToLetter(parsed)}`
-      : error
-      ? 'Enter a letter (A, B+) or a percentage (87)'
-      : 'e.g. B+ or 87';
+  let hint = 'e.g. B+ or 87';
+  if (error) {
+    hint = 'Enter a letter (A, B+) or a percentage (87)';
+  } else if (parsed !== null) {
+    try {
+      hint = `${parsed}% — ${percentToLetterWithScheme(parsed, gradingScheme)}`;
+    } catch {
+      hint = `${parsed}%`;
+    }
+  }
 
   return (
     <div className="ck-target-section">

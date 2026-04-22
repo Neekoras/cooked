@@ -7,20 +7,6 @@ function formatDue(iso) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function ScoreChip({ result }) {
-  if (!result) return null;
-  if (result.isAchieved) {
-    return <span className="ck-chip ck-chip-achieved">On track</span>;
-  }
-  if (result.isImpossible) {
-    return <span className="ck-chip ck-chip-impossible">Not possible</span>;
-  }
-  if (result.requiredPercent > 90) {
-    return <span className="ck-chip ck-chip-high">{result.requiredPercent.toFixed(0)}% needed</span>;
-  }
-  return null;
-}
-
 function AssignmentRow({ assignment, inverseResult, isDropped }) {
   const graded = isGraded(assignment);
   const sub = assignment.submission;
@@ -40,11 +26,45 @@ function AssignmentRow({ assignment, inverseResult, isDropped }) {
     : pct >= 70   ? 'var(--text)'
     : 'var(--red)';
 
+  // Right-side content for ungraded assignments
+  let ungraded = null;
+  if (!graded) {
+    if (isDropped) {
+      ungraded = null;
+    } else if (!inverseResult) {
+      ungraded = <span style={{ color: 'var(--text-3)' }}>—</span>;
+    } else if (inverseResult.isAchieved) {
+      ungraded = <span className="ck-chip ck-chip-achieved">on track</span>;
+    } else if (inverseResult.isImpossible) {
+      ungraded = <span className="ck-chip ck-chip-impossible">not possible</span>;
+    } else {
+      const reqPct = inverseResult.requiredPercent;
+      const chipClass = reqPct > 100 ? 'ck-chip ck-chip-impossible'
+                      : reqPct > 90  ? 'ck-chip ck-chip-high'
+                      : 'ck-chip ck-chip-achieved';
+      ungraded = (
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ color: 'var(--accent)', fontSize: '12px', fontWeight: 600 }}>
+            {inverseResult.requiredScore.toFixed(1)}/{possible} pts
+          </div>
+          <span className={chipClass}>{reqPct.toFixed(1)}%</span>
+        </div>
+      );
+    }
+  }
+
   return (
     <div className={className}>
       <div className="ck-a-name">
         {assignment.name}
-        {due && <span className="ck-a-due">{due}</span>}
+        <span className="ck-a-due">
+          {[
+            due,
+            assignment.score_statistics?.mean != null && possible > 0
+              ? `class avg ${((assignment.score_statistics.mean / possible) * 100).toFixed(0)}%`
+              : null,
+          ].filter(Boolean).join(' · ')}
+        </span>
       </div>
 
       <div className="ck-a-score" style={{ color: scoreColor }}>
@@ -55,22 +75,7 @@ function AssignmentRow({ assignment, inverseResult, isDropped }) {
               {pct !== null ? `${pct.toFixed(0)}%` : ''}
             </span>
           </>
-        ) : (
-          <>
-            <ScoreChip result={inverseResult} />
-            {!inverseResult?.isAchieved && !inverseResult?.isImpossible && inverseResult && (
-              <span style={{ color: 'var(--accent)', fontSize: '12px', fontWeight: 600 }}>
-                {inverseResult.requiredPercent.toFixed(1)}%
-                <span className="ck-a-needed">
-                  {inverseResult.requiredScore.toFixed(1)}/{possible} pts
-                </span>
-              </span>
-            )}
-            {!inverseResult && (
-              <span style={{ color: 'var(--text-3)' }}>—</span>
-            )}
-          </>
-        )}
+        ) : ungraded}
         {isDropped && <span className="ck-chip ck-chip-dropped">dropped</span>}
       </div>
     </div>

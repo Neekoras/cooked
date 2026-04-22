@@ -1,13 +1,50 @@
-import { useState, useEffect, useMemo } from 'react';
-import { loadCourseData, getCourseId } from '../api/canvasClient';
-import { calculateGrade, solveInverse } from '../math/gradeEngine';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { loadCourseData, fetchAllCourses, getCourseId, setApiBase } from '../api/canvasClient';
+import { calculateGrade, solveInverse, normalizeGradingScheme } from '../math/gradeEngine';
 import GradeDisplay from './GradeDisplay';
 import TargetInput from './TargetInput';
 import Breakdown from './Breakdown';
 import PanicMode from './PanicMode';
 import ShareCard from './ShareCard';
+import CourseList from './CourseList';
 
-const TABS = ['Breakdown', 'Panic', 'Share'];
+const COURSE_TABS = ['Breakdown', 'Panic', 'Share'];
+
+function abbrev(course) {
+  const name = course.name.trim();
+  const words = name.split(/\s+/).filter(w => w.length > 0);
+
+  // If it's 1-2 short words already (e.g. "PE", "Art"), use as-is
+  if (words.length <= 2 && name.length <= 6) return name.toUpperCase();
+
+  // Multi-word: build initialism (e.g. "Physical Education" → "PE")
+  const initials = words.map(w => w[0]).join('').toUpperCase();
+  if (initials.length >= 2 && initials.length <= 5) return initials;
+
+  // Fall back: first 4 chars of first word
+  return words[0].slice(0, 4).toUpperCase();
+}
+
+function QuickSwitcher({ courses, activeCourseId, onSelect }) {
+  if (!courses.length) return null;
+  return (
+    <div className="ck-quick-switcher">
+      {courses.map(c => {
+        const isActive = String(c.id) === String(activeCourseId);
+        return (
+          <button
+            key={c.id}
+            className={`ck-quick-btn ${isActive ? 'is-active' : ''}`}
+            onClick={() => onSelect(c.id)}
+            title={c.name}
+          >
+            {abbrev(c)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function LoadingState() {
   return (
@@ -31,107 +68,230 @@ function ErrorState({ message }) {
   );
 }
 
-export default function Sidebar({ isOpen, onToggle }) {
-  const [status, setStatus] = useState('idle'); // idle | loading | ready | error
-  const [error, setError] = useState(null);
-  const [rawGroups, setRawGroups] = useState(null);
-  const [isWeighted, setIsWeighted] = useState(false);
-  const [enrollmentGrade, setEnrollmentGrade] = useState(null);
-  const [targetPercent, setTargetPercent] = useState(null);
-  const [activeTab, setActiveTab] = useState('Breakdown');
+export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
+  // In embedded (side panel) mode, we must read the tab URL before any API calls.
+  // apiReady gates all data fetching so we never fire requests with an empty base URL.
+  const [apiReady, setApiReady] = useState(!embedded);
+  const [urlCourseId, setUrlCourseId] = useState(embedded ? null : getCourseId());
 
-  // Load data once when the sidebar first opens
   useEffect(() => {
-    if (!isOpen || status !== 'idle') return;
+    if (!embedded) return;
+    function readUrl(url) {
+      if (!url) return;
+      try {
+        const { origin } = new URL(url);
+        if (origin.includes('instructure.com')) {
+          setApiBase(origin);
+          setApiReady(true);
+        }
+      } catch {}
+      const m = url.match(/\/courses\/(\d+)/);
+      setUrlCourseId(m ? m[1] : null);
+    }
+    chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => readUrl(tab?.url));
+    const listener = (_id, info) => { if (info.url) readUrl(info.url); };
+    chrome.tabs.onUpdated.addListener(listener);
+    return () => chrome.tabs.onUpdated.removeListener(listener);
+  }, [embedded]);
 
-    const courseId = getCourseId();
-    if (!courseId) {
-      setError('Could not detect a course ID in the URL.');
-      setStatus('error');
+  // Navigation
+  const [view, setView] = useState('course'); // 'course' | 'courses'
+  const [activeCourseId, setActiveCourseId] = useState(urlCourseId);
+  const [activeTab, setActiveTab] = useState('Breakdown');
+  const [targetPercent, setTargetPercent] = useState(null);
+
+  // Course list (all courses overview)
+  const [courseList, setCourseList] = useState([]);
+  const [coursesStatus, setCoursesStatus] = useState('idle');
+
+  // Per-course grade data — cached by course ID
+  const courseCache = useRef({});
+  const [courseData, setCourseData] = useState({
+    status: 'idle',
+    groups: null,
+    isWeighted: false,
+    enrollmentGrade: null,
+    gradingScheme: null,
+    error: null,
+  });
+
+  // When tab navigates to a new course, update the active course
+  useEffect(() => {
+    if (urlCourseId) setActiveCourseId(urlCourseId);
+  }, [urlCourseId]);
+
+  // In embedded mode, sidebar is always "open"
+  const open = embedded ? true : isOpen;
+
+  // Load course list once the API is ready
+  useEffect(() => {
+    if (!open || !apiReady || coursesStatus !== 'idle') return;
+    setCoursesStatus('loading');
+    fetchAllCourses()
+      .then(courses => {
+        setCourseList(courses);
+        setCoursesStatus('ready');
+      })
+      .catch(() => setCoursesStatus('error'));
+  }, [isOpen, coursesStatus]);
+
+  // Load grade data for the active course (with cache)
+  useEffect(() => {
+    if (!open || !apiReady || !activeCourseId) return;
+
+    if (courseCache.current[activeCourseId]) {
+      setCourseData({ ...courseCache.current[activeCourseId], status: 'ready', error: null });
       return;
     }
 
-    setStatus('loading');
+    setCourseData({ status: 'loading', groups: null, isWeighted: false, enrollmentGrade: null, error: null });
 
-    loadCourseData(courseId)
-      .then(({ groups, isWeighted: w, enrollmentGrade: eg }) => {
-        setRawGroups(groups);
-        setIsWeighted(w);
-        setEnrollmentGrade(eg);
-        setStatus('ready');
+    loadCourseData(activeCourseId)
+      .then(({ groups, isWeighted, enrollmentGrade, gradingScheme }) => {
+        const entry = { groups, isWeighted, enrollmentGrade, gradingScheme: normalizeGradingScheme(gradingScheme) };
+        courseCache.current[activeCourseId] = entry;
+        setCourseData({ ...entry, status: 'ready', error: null });
       })
       .catch(err => {
-        setError(err.message || 'An unknown error occurred.');
-        setStatus('error');
+        setCourseData({ status: 'error', groups: null, isWeighted: false, enrollmentGrade: null, error: err.message });
       });
-  }, [isOpen, status]);
+  }, [isOpen, activeCourseId]);
 
-  const { grade, groupResults, totalRemaining } = useMemo(() => {
-    if (!rawGroups) return { grade: null, groupResults: [], totalRemaining: 0 };
-    return calculateGrade(rawGroups, isWeighted);
-  }, [rawGroups, isWeighted]);
+  const { grade, groupResults } = useMemo(() => {
+    if (!courseData.groups) return { grade: null, groupResults: [] };
+    return calculateGrade(courseData.groups, courseData.isWeighted);
+  }, [courseData.groups, courseData.isWeighted]);
 
   const inverseResults = useMemo(() => {
     if (!groupResults || targetPercent === null) return [];
-    return solveInverse(groupResults, targetPercent, isWeighted);
-  }, [groupResults, targetPercent, isWeighted]);
+    return solveInverse(groupResults, targetPercent, courseData.isWeighted);
+  }, [groupResults, targetPercent, courseData.isWeighted]);
+
+  function handleCourseSelect(courseId) {
+    const id = String(courseId);
+    setActiveCourseId(id);
+    setView('course');
+    setActiveTab('Breakdown');
+    setTargetPercent(null);
+    // Navigate the browser tab to that course's grades page
+    const target = `/courses/${id}/grades`;
+    if (embedded) {
+      chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+        const url = new URL(tab.url);
+        if (!url.pathname.startsWith(target)) {
+          chrome.tabs.update(tab.id, { url: url.origin + target });
+        }
+      });
+    } else if (!window.location.pathname.startsWith(target)) {
+      window.location.href = target;
+    }
+  }
+
+  const activeCourse = courseList.find(c => String(c.id) === String(activeCourseId));
+
+  const panelStyle = embedded ? {
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+    transform: 'none',
+    borderLeft: 'none',
+    boxShadow: 'none',
+    zIndex: 'auto',
+  } : {};
 
   return (
     <>
-      {/* Slide-out tab — inline styles are fallback in case CSS fails to inject */}
-      <button
-        className={`ck-tab ${isOpen ? 'is-open' : ''}`}
-        onClick={onToggle}
-        aria-label={isOpen ? 'Close Cooked' : 'Open Cooked'}
-        style={{
-          position: 'fixed',
-          top: '50%',
-          right: isOpen ? '360px' : '0',
-          transform: 'translateY(-50%)',
-          zIndex: 2147483646,
-          cursor: 'pointer',
-          background: '#13161F',
-          border: '1px solid #252836',
-          borderRight: 'none',
-          borderRadius: '6px 0 0 6px',
-          color: '#C9A84C',
-          fontFamily: 'DM Sans, system-ui, sans-serif',
-          fontSize: '10px',
-          fontWeight: 600,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          padding: '14px 7px',
-          writingMode: 'vertical-rl',
-          transition: 'right 300ms cubic-bezier(0.4,0,0.2,1)',
-        }}
-      >
-        {isOpen ? '✕' : 'COOKED'}
-      </button>
+      {/* Slide-out tab — only in overlay (non-embedded) mode */}
+      {!embedded && (
+        <button
+          className={`ck-tab ${open ? 'is-open' : ''}`}
+          onClick={onToggle}
+          aria-label={open ? 'Close Cooked' : 'Open Cooked'}
+          style={{
+            position: 'fixed',
+            top: '50%',
+            right: open ? '360px' : '0',
+            transform: 'translateY(-50%)',
+            zIndex: 2147483646,
+            cursor: 'pointer',
+            background: '#151210',
+            border: '1px solid #2C2720',
+            borderRight: 'none',
+            borderRadius: '6px 0 0 6px',
+            color: '#C89A2C',
+            fontFamily: 'DM Sans, system-ui, sans-serif',
+            fontSize: '10px',
+            fontWeight: 600,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            padding: '14px 7px',
+            writingMode: 'vertical-rl',
+            transition: 'right 300ms cubic-bezier(0.4,0,0.2,1)',
+          }}
+        >
+          {open ? '✕' : 'COOKED'}
+        </button>
+      )}
 
       {/* Panel */}
-      <div className={`ck-panel ${isOpen ? 'is-open' : ''}`} aria-hidden={!isOpen}>
+      <div
+        className={`ck-panel ${embedded ? 'is-open' : open ? 'is-open' : ''}`}
+        aria-hidden={!open}
+        style={panelStyle}
+      >
 
         {/* Header */}
         <div className="ck-header">
-          <div className="ck-wordmark">Cooked?</div>
-          {status === 'ready' && grade !== null && (
+          <div className="ck-header-top">
+            {view === 'course' ? (
+              <>
+                <div className="ck-wordmark">Cooked?</div>
+                <button className="ck-courses-btn" onClick={() => setView('courses')}>
+                  All Courses
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="ck-back-btn" onClick={() => setView('course')}>
+                  ← Back
+                </button>
+                <div className="ck-wordmark">Cooked?</div>
+              </>
+            )}
+          </div>
+
+          {view === 'course' && activeCourse && (
+            <div className="ck-course-title-header">{activeCourse.name}</div>
+          )}
+
+          {view === 'course' && courseData.status === 'ready' && grade !== null && (
             <GradeDisplay
               grade={grade}
-              canvasGrade={enrollmentGrade}
-              isWeighted={isWeighted}
+              canvasGrade={courseData.enrollmentGrade}
+              isWeighted={courseData.isWeighted}
+              gradingScheme={courseData.gradingScheme}
             />
           )}
         </div>
 
-        {/* Target input — always visible when ready */}
-        {status === 'ready' && (
-          <TargetInput onChange={setTargetPercent} />
+        {/* Quick course switcher */}
+        {coursesStatus === 'ready' && courseList.length > 1 && (
+          <QuickSwitcher
+            courses={courseList}
+            activeCourseId={activeCourseId}
+            onSelect={handleCourseSelect}
+          />
+        )}
+
+        {/* Target input */}
+        {view === 'course' && courseData.status === 'ready' && (
+          <TargetInput onChange={setTargetPercent} gradingScheme={courseData.gradingScheme} />
         )}
 
         {/* Tab bar */}
-        {status === 'ready' && (
+        {view === 'course' && courseData.status === 'ready' && (
           <div className="ck-tabs" role="tablist">
-            {TABS.map(tab => (
+            {COURSE_TABS.map(tab => (
               <button
                 key={tab}
                 className={`ck-tab-btn ${activeTab === tab ? 'is-active' : ''}`}
@@ -147,33 +307,48 @@ export default function Sidebar({ isOpen, onToggle }) {
 
         {/* Scrollable content */}
         <div className="ck-scroll">
-          {status === 'idle' && (
-            <div className="ck-empty">Open to calculate your grade.</div>
+          {view === 'courses' && (
+            <CourseList
+              courses={courseList}
+              status={coursesStatus}
+              activeCourseId={activeCourseId}
+              onSelect={handleCourseSelect}
+            />
           )}
-          {status === 'loading' && <LoadingState />}
-          {status === 'error' && <ErrorState message={error} />}
 
-          {status === 'ready' && (
+          {view === 'course' && !apiReady && (
+            <div className="ck-empty" style={{ paddingTop: 40 }}>
+              Open a Canvas page first, then come back here.
+            </div>
+          )}
+
+          {view === 'course' && apiReady && (
             <>
-              {activeTab === 'Breakdown' && (
-                <Breakdown
-                  groupResults={groupResults}
-                  inverseResults={inverseResults}
-                />
-              )}
-              {activeTab === 'Panic' && (
-                <PanicMode
-                  groupResults={groupResults}
-                  targetPercent={targetPercent}
-                  isWeighted={isWeighted}
-                />
-              )}
-              {activeTab === 'Share' && (
-                <ShareCard
-                  grade={grade}
-                  targetPercent={targetPercent}
-                  inverseResults={inverseResults}
-                />
+              {courseData.status === 'loading' && <LoadingState />}
+              {courseData.status === 'error' && <ErrorState message={courseData.error} />}
+              {courseData.status === 'ready' && (
+                <>
+                  {activeTab === 'Breakdown' && (
+                    <Breakdown
+                      groupResults={groupResults}
+                      inverseResults={inverseResults}
+                    />
+                  )}
+                  {activeTab === 'Panic' && (
+                    <PanicMode
+                      groupResults={groupResults}
+                      targetPercent={targetPercent}
+                      isWeighted={courseData.isWeighted}
+                    />
+                  )}
+                  {activeTab === 'Share' && (
+                    <ShareCard
+                      grade={grade}
+                      targetPercent={targetPercent}
+                      inverseResults={inverseResults}
+                    />
+                  )}
+                </>
               )}
             </>
           )}

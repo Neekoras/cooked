@@ -1,9 +1,8 @@
-import { percentToLetter } from '../math/gradeEngine';
+import { percentToLetterWithScheme } from '../math/gradeEngine';
 
-export default function GradeDisplay({ grade, canvasGrade, isWeighted }) {
-  const letter = grade !== null ? percentToLetter(grade) : null;
+export default function GradeDisplay({ grade, canvasGrade, isWeighted, gradingScheme }) {
+  const letter = grade !== null ? percentToLetterWithScheme(grade, gradingScheme) : null;
 
-  // Discrepancy: our calc differs from Canvas's reported grade by > 0.5 points
   const hasDiscrepancy =
     grade !== null &&
     canvasGrade?.currentScore !== null &&

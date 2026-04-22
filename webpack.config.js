@@ -3,8 +3,8 @@ const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = (env, argv) => ({
   entry: {
-    content: './src/content.js',
     background: './src/background.js',
+    sidepanel: './src/sidepanel.js',
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -27,7 +27,7 @@ module.exports = (env, argv) => ({
         },
       },
       {
-        // Inline CSS as a string so content.js can inject it into the shadow root
+        // Inline CSS as a string so sidepanel.js can inject it into the document
         test: /\.css$/,
         use: [
           'to-string-loader',
@@ -43,6 +43,7 @@ module.exports = (env, argv) => ({
     new CopyPlugin({
       patterns: [
         { from: 'manifest.json', to: 'manifest.json' },
+        { from: 'src/sidepanel.html', to: 'sidepanel.html' },
         { from: 'src/icons', to: 'icons', noErrorOnMissing: true },
       ],
     }),

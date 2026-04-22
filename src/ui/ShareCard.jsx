@@ -57,47 +57,47 @@ function drawCard(message, canvas) {
   const ctx = canvas.getContext('2d');
 
   // Background
-  ctx.fillStyle = '#111111';
+  ctx.fillStyle = '#0C0A08';
   ctx.fillRect(0, 0, W, H);
 
-  // Top gold line
+  // Top amber line
   const grad = ctx.createLinearGradient(0, 0, W, 0);
   grad.addColorStop(0, 'transparent');
-  grad.addColorStop(0.5, '#C9A84C');
+  grad.addColorStop(0.5, '#C89A2C');
   grad.addColorStop(1, 'transparent');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, 1);
 
   // Border
-  ctx.strokeStyle = '#2A2A2A';
+  ctx.strokeStyle = '#2C2720';
   ctx.lineWidth = 1;
   ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
 
   // Logo
-  ctx.fillStyle = '#444444';
+  ctx.fillStyle = '#665E55';
   ctx.font = '600 11px "DM Sans", system-ui, sans-serif';
   ctx.letterSpacing = '0.15em';
   ctx.fillText('COOKED', 28, 42);
 
   // Main headline
   ctx.fillStyle = message.accent.startsWith('var')
-    ? message.accent === 'var(--green)' ? '#52A878'
-    : message.accent === 'var(--red)' ? '#E05252'
-    : '#C9A84C'
+    ? message.accent === 'var(--green)' ? '#4AAB7A'
+    : message.accent === 'var(--red)' ? '#D14545'
+    : '#C89A2C'
     : message.accent;
 
-  ctx.font = 'bold 36px "Playfair Display", Georgia, serif';
+  ctx.font = 'bold 36px "Fraunces", Georgia, serif';
   ctx.letterSpacing = '-0.02em';
   ctx.fillText(message.line1, 28, 120);
 
   // Sub line
-  ctx.fillStyle = '#888888';
+  ctx.fillStyle = '#9C9389';
   ctx.font = '400 15px "DM Sans", system-ui, sans-serif';
   ctx.letterSpacing = '0';
   ctx.fillText(message.line2, 28, 152);
 
   // URL watermark
-  ctx.fillStyle = '#333333';
+  ctx.fillStyle = '#665E55';
   ctx.font = '400 11px "DM Sans", system-ui, sans-serif';
   ctx.fillText('amIcooked.app', W - 28 - ctx.measureText('amIcooked.app').width, H - 18);
 }
