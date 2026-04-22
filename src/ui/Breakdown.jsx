@@ -10,6 +10,7 @@ function formatDue(iso) {
 function AssignmentRow({ assignment, inverseResult, isDropped }) {
   const graded = isGraded(assignment);
   const sub = assignment.submission;
+  const isMissing = !graded && (sub?.missing === true || sub?.late_policy_status === 'missing');
   const score = graded ? sub?.score : null;
   const possible = assignment.points_possible;
   const pct = graded && possible > 0 ? (score / possible) * 100 : null;
@@ -19,6 +20,7 @@ function AssignmentRow({ assignment, inverseResult, isDropped }) {
   let className = 'ck-assignment';
   if (isDropped) className += ' is-dropped';
   else if (graded) className += ' is-graded';
+  else if (isMissing) className += ' is-missing';
 
   const scoreColor =
     pct === null ? 'var(--text-2)'
@@ -32,7 +34,9 @@ function AssignmentRow({ assignment, inverseResult, isDropped }) {
     if (isDropped) {
       ungraded = null;
     } else if (!inverseResult) {
-      ungraded = <span style={{ color: 'var(--text-3)' }}>—</span>;
+      ungraded = isMissing
+        ? <span className="ck-badge ck-badge-missing">Missing</span>
+        : <span className="ck-badge ck-badge-upcoming">{possible > 0 ? `${possible} pts` : '—'}</span>;
     } else if (inverseResult.isAchieved) {
       ungraded = <span className="ck-chip ck-chip-achieved">on track</span>;
     } else if (inverseResult.isImpossible) {
@@ -40,7 +44,7 @@ function AssignmentRow({ assignment, inverseResult, isDropped }) {
     } else {
       const reqPct = inverseResult.requiredPercent;
       const chipClass = reqPct > 100 ? 'ck-chip ck-chip-impossible'
-                      : reqPct > 90  ? 'ck-chip ck-chip-high'
+                      : reqPct >= 80  ? 'ck-chip ck-chip-high'
                       : 'ck-chip ck-chip-achieved';
       ungraded = (
         <div style={{ textAlign: 'right' }}>

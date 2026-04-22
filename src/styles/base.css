@@ -15,8 +15,8 @@
 
   /* Text */
   --text:      #F0EDE6;
-  --text-2:    #9C9389;
-  --text-3:    #665E55;
+  --text-2:    #B0A99F;
+  --text-3:    #7A7168;
   --text-inv:  #100D06;
 
   /* Accent — amber from icon C letterform, HSL 43° */
@@ -117,7 +117,8 @@
 /* ─── Header ──────────────────────────────────────────────────────────── */
 .ck-header {
   padding: 18px 20px 14px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-2);
+  box-shadow: 0 2px 12px rgba(12,8,4,0.45);
   flex-shrink: 0;
 }
 .ck-header-top {
@@ -274,7 +275,7 @@
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px var(--accent-subtle), 0 0 0 1px var(--accent);
 }
-.ck-input::placeholder { color: var(--text-3); }
+.ck-input::placeholder { color: var(--text-2); opacity: 1; }
 .ck-input-hint {
   margin-top: 5px;
   font-size: 11px;
@@ -302,7 +303,7 @@
   transition: color 120ms, border-color 120ms;
   white-space: nowrap;
 }
-.ck-tab-btn:hover    { color: var(--text-2); }
+.ck-tab-btn:hover    { color: var(--text-2); background: rgba(240,237,230,0.03); }
 .ck-tab-btn.is-active {
   color: var(--accent);
   border-bottom-color: var(--accent);
@@ -344,7 +345,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ck-group-weight { font-size: 11px; color: var(--text-3); flex-shrink: 0; }
+.ck-group-weight { font-size: 10px; color: var(--text-3); flex-shrink: 0; }
 .ck-group-score  { font-size: 12px; font-weight: 600; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .ck-chevron      { font-size: 10px; color: var(--text-3); flex-shrink: 0; transition: transform 150ms; }
 .ck-chevron.is-open { transform: rotate(180deg); }
@@ -353,13 +354,15 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
-  padding: 8px 20px;
+  padding: 9px 20px 9px 17px;
   border-top: 1px solid var(--border);
-  transition: background 100ms;
+  border-left: 3px solid transparent;
+  transition: background 100ms, border-color 100ms;
 }
-.ck-assignment:hover           { background: rgba(240,237,230,0.02); }
-.ck-assignment.is-graded       { opacity: 0.48; }
-.ck-assignment.is-graded:hover { opacity: 0.7; }
+.ck-assignment:hover           { background: rgba(240,237,230,0.035); }
+.ck-assignment.is-graded       { opacity: 0.65; border-left-color: rgba(74,171,122,0.18); }
+.ck-assignment.is-graded:hover { opacity: 0.82; }
+.ck-assignment.is-missing      { border-left-color: rgba(209,69,69,0.55); }
 .ck-assignment.is-dropped      { opacity: 0.25; }
 
 .ck-a-name {
@@ -382,6 +385,7 @@
 .ck-a-score {
   flex-shrink: 0;
   font-size: 12px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
@@ -395,17 +399,30 @@
 /* ─── Chips ───────────────────────────────────────────────────────────── */
 .ck-chip {
   display: inline-block;
-  padding: 2px 6px;
-  border-radius: 3px;
+  padding: 2px 7px;
+  border-radius: 100px;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.04em;
   white-space: nowrap;
 }
-.ck-chip-impossible { background: var(--red-dim);    color: var(--red-hi); }
-.ck-chip-achieved   { background: var(--green-dim);  color: var(--green-hi); }
-.ck-chip-high       { background: var(--yellow-dim); color: var(--yellow-hi); }
-.ck-chip-dropped    { background: rgba(240,237,230,0.05); color: var(--text-3); }
+.ck-chip-impossible { background: var(--red-dim);         color: var(--red-hi); }
+.ck-chip-achieved   { background: var(--green-dim);        color: var(--green-hi); }
+.ck-chip-high       { background: var(--yellow-dim);       color: var(--yellow-hi); }
+.ck-chip-dropped    { background: rgba(240,237,230,0.05);  color: var(--text-3); }
+
+/* ─── State badges (missing / upcoming) ──────────────────────────────── */
+.ck-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+.ck-badge-missing  { background: var(--red-dim);              color: var(--red-hi); }
+.ck-badge-upcoming { background: rgba(240,237,230,0.05);       color: var(--text-3); }
 
 /* ─── GPA block ───────────────────────────────────────────────────────── */
 .ck-gpa-block {
@@ -479,7 +496,7 @@
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23665E55' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%237A7168' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
   transition: border-color 120ms;
