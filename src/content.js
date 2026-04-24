@@ -1,14 +1,56 @@
 import { createRoot } from 'react-dom/client';
-import { useState } from 'react';
+import { useState, Component } from 'react';
 import Sidebar from './ui/Sidebar';
 import styles from './styles/base.css';
 
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { crashed: false };
+  }
+  static getDerivedStateFromError() {
+    return { crashed: true };
+  }
+  render() {
+    if (this.state.crashed) {
+      return (
+        <div className="ck-root">
+          <div className="ck-panel is-open" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="ck-error" style={{ textAlign: 'center' }}>
+              <p className="ck-error-title">Something went wrong</p>
+              <p className="ck-error-body">
+                <button className="ck-btn" style={{ marginTop: 12 }} onClick={() => this.setState({ crashed: false })}>
+                  Try again
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function App() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(
+    () => sessionStorage.getItem('ck-open') === '1'
+  );
+
+  function toggle() {
+    setIsOpen(v => {
+      const next = !v;
+      sessionStorage.setItem('ck-open', next ? '1' : '0');
+      return next;
+    });
+  }
+
   return (
-    <div className="ck-root">
-      <Sidebar isOpen={isOpen} onToggle={() => setIsOpen(v => !v)} />
-    </div>
+    <ErrorBoundary>
+      <div className="ck-root">
+        <Sidebar isOpen={isOpen} onToggle={toggle} />
+      </div>
+    </ErrorBoundary>
   );
 }
 
