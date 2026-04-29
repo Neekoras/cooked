@@ -385,13 +385,19 @@ export function solveInverse(groupResults, targetPercent, isWeighted) {
   const results = [];
 
   if (isWeighted) {
-    const totalWeight =
-      groupResults.reduce((s, g) => s + (g.group_weight ?? 0), 0) || 100;
-
     for (const group of groupResults) {
       if (group.remaining.length === 0) continue;
 
-      const groupNormWeight = (group.group_weight ?? 0) / totalWeight;
+      // Use Canvas's own normalization: only count weights of groups that
+      // currently have graded data, plus this group (which will have data once
+      // remaining work is submitted). Groups with no data are excluded — this
+      // matches how Canvas computes weighted grades.
+      const effectiveTotalWeight =
+        groupResults
+          .filter(g => g.score.percent !== null || g.id === group.id)
+          .reduce((s, g) => s + (g.group_weight ?? 0), 0) || 100;
+
+      const groupNormWeight = (group.group_weight ?? 0) / effectiveTotalWeight;
 
       // Contribution from every OTHER group using their current score.
       // Groups with no graded work contribute 0 (can't assume a score).
@@ -399,7 +405,7 @@ export function solveInverse(groupResults, targetPercent, isWeighted) {
         .filter(g => g.id !== group.id)
         .reduce((sum, g) => {
           if (g.score.percent === null) return sum;
-          return sum + (g.score.percent / 100) * ((g.group_weight ?? 0) / totalWeight);
+          return sum + (g.score.percent / 100) * ((g.group_weight ?? 0) / effectiveTotalWeight);
         }, 0);
 
       const requiredGroupContrib = target - otherContrib;
@@ -462,34 +468,52 @@ export function solvePanic(groupResults, targetPercent, assignmentId, isWeighted
 
   let panicAssignment = null;
   let panicGroup = null;
+  let panicIsAutoZero = false; // auto-graded-zero missing assignments need score adjustment
 
   for (const g of groupResults) {
-    const found = g.remaining.find(a => String(a.id) === id);
-    if (found) { panicAssignment = found; panicGroup = g; break; }
+    // Search remaining first (most common case)
+    const inRemaining = g.remaining.find(a => String(a.id) === id);
+    if (inRemaining) { panicAssignment = inRemaining; panicGroup = g; break; }
+
+    // Also search all assignments for auto-graded-zero missing ones (score=0,
+    // flagged missing) — they pass isPanicEligible but not isRemaining.
+    const inAll = (g.assignments || []).find(
+      a => String(a.id) === id && isPanicEligible(a) && !isRemaining(a)
+    );
+    if (inAll) { panicAssignment = inAll; panicGroup = g; panicIsAutoZero = true; break; }
   }
 
   if (!panicAssignment || !panicGroup) return null;
 
   if (isWeighted) {
-    const totalWeight =
-      groupResults.reduce((s, g) => s + (g.group_weight ?? 0), 0) || 100;
-    const groupNormWeight = (panicGroup.group_weight ?? 0) / totalWeight;
+    // Use Canvas's normalization: only groups with data count, plus the panic
+    // group itself (it will have data once the panic assignment is submitted).
+    const effectiveTotalWeight =
+      groupResults
+        .filter(g => g.score.percent !== null || g.id === panicGroup.id)
+        .reduce((s, g) => s + (g.group_weight ?? 0), 0) || 100;
+
+    const groupNormWeight = (panicGroup.group_weight ?? 0) / effectiveTotalWeight;
 
     const otherContrib = groupResults
       .filter(g => g.id !== panicGroup.id)
       .reduce((sum, g) => {
         if (g.score.percent === null) return sum;
-        return sum + (g.score.percent / 100) * ((g.group_weight ?? 0) / totalWeight);
+        return sum + (g.score.percent / 100) * ((g.group_weight ?? 0) / effectiveTotalWeight);
       }, 0);
 
     const requiredGroupPct =
       groupNormWeight > 0 ? (target - otherContrib) / groupNormWeight : null;
     if (requiredGroupPct === null) return null;
 
+    // For auto-graded-zero assignments: their 0 score is already in the group
+    // earned/possible totals — back it out so the solver treats it as unscored.
+    const baseEarned   = panicGroup.score.earned   - (panicIsAutoZero ? 0 : 0);
+    const basePossible = panicGroup.score.possible  - (panicIsAutoZero ? panicAssignment.points_possible : 0);
+
     // Other remaining assignments in this group: assume current group average
-    const fallbackPct = panicGroup.score.percent !== null
-      ? panicGroup.score.percent / 100
-      : 0.75;
+    const groupAvgPct = basePossible > 0 ? baseEarned / basePossible : 0.75;
+    const fallbackPct = groupAvgPct > 0 ? groupAvgPct : 0.75;
 
     const otherRemaining = panicGroup.remaining.filter(a => String(a.id) !== id);
     const otherEarned = otherRemaining.reduce(
@@ -497,16 +521,16 @@ export function solvePanic(groupResults, targetPercent, assignmentId, isWeighted
     );
     const otherPossible = otherRemaining.reduce((s, a) => s + a.points_possible, 0);
 
-    const totalGroupPossible =
-      panicGroup.score.possible + otherPossible + panicAssignment.points_possible;
-    const currentGroupEarned = panicGroup.score.earned + otherEarned;
-    const neededOnPanic =
-      requiredGroupPct * totalGroupPossible - currentGroupEarned;
+    const totalGroupPossible = basePossible + otherPossible + panicAssignment.points_possible;
+    const currentGroupEarned = baseEarned + otherEarned;
+    const neededOnPanic = requiredGroupPct * totalGroupPossible - currentGroupEarned;
 
     return buildResult(panicAssignment, panicGroup.name, neededOnPanic);
   } else {
-    const totalEarned = groupResults.reduce((s, g) => s + g.score.earned, 0);
-    const totalPossible = groupResults.reduce((s, g) => s + g.score.possible, 0);
+    // Unweighted: back out auto-graded-zero score from totals if needed
+    const totalEarned   = groupResults.reduce((s, g) => s + g.score.earned, 0);
+    const totalPossible = groupResults.reduce((s, g) => s + g.score.possible, 0)
+      - (panicIsAutoZero ? panicAssignment.points_possible : 0);
     const fallbackPct =
       totalPossible > 0 ? totalEarned / totalPossible : 0.75;
 
