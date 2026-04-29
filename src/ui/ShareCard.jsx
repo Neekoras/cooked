@@ -43,7 +43,7 @@ function buildMessage(grade, targetPercent, inverseResults) {
     };
   }
 
-  return { line1: 'Check your grade', line2: 'Cooked', accent: 'var(--accent)' };
+  return { line1: 'Grade not loaded yet', line2: 'Open a Canvas course to get started', accent: 'var(--accent)' };
 }
 
 /**
@@ -80,11 +80,13 @@ function drawCard(message, canvas) {
   ctx.fillText('COOKED', 28, 42);
 
   // Main headline
-  ctx.fillStyle = message.accent.startsWith('var')
-    ? message.accent === 'var(--green)' ? '#4AAB7A'
-    : message.accent === 'var(--red)' ? '#D14545'
-    : '#C89A2C'
-    : message.accent;
+  const CSS_VAR_COLORS = {
+    'var(--green)': '#4AAB7A',
+    'var(--red)':   '#D14545',
+    'var(--accent)': '#C89A2C',
+    'var(--yellow)': '#C8912C',
+  };
+  ctx.fillStyle = CSS_VAR_COLORS[message.accent] ?? message.accent;
 
   ctx.font = 'bold 36px "Fraunces", Georgia, serif';
   ctx.letterSpacing = '-0.02em';

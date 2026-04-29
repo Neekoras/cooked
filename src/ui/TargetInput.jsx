@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { letterToPercentWithScheme, percentToLetterWithScheme } from '../math/gradeEngine';
 
 export default function TargetInput({ onChange, gradingScheme }) {
@@ -31,16 +31,17 @@ export default function TargetInput({ onChange, gradingScheme }) {
     }
   }, [value, gradingScheme]);
 
-  let hint = 'e.g. B+ or 87';
-  if (error) {
-    hint = 'Enter a letter (A, B+) or a percentage (87)';
-  } else if (parsed !== null) {
-    try {
-      hint = `${parsed}% — ${percentToLetterWithScheme(parsed, gradingScheme)}`;
-    } catch {
-      hint = `${parsed}%`;
+  const hint = useMemo(() => {
+    if (error) return 'Enter a letter grade (A, B+) or a number 0–105';
+    if (parsed !== null) {
+      try {
+        return `${parsed}% — ${percentToLetterWithScheme(parsed, gradingScheme)}`;
+      } catch {
+        return `${parsed}%`;
+      }
     }
-  }
+    return 'e.g. B+ or 87';
+  }, [parsed, error, gradingScheme]);
 
   return (
     <div className="ck-target-section">
@@ -61,6 +62,7 @@ export default function TargetInput({ onChange, gradingScheme }) {
       <p
         className="ck-input-hint"
         style={error ? { color: 'var(--red)' } : undefined}
+        aria-live="polite"
       >
         {hint}
       </p>

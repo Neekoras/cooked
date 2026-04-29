@@ -7,6 +7,9 @@
   "host_permissions": [
     "https://*.instructure.com/*"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;"
+  },
   "side_panel": {
     "default_path": "sidepanel.html"
   },

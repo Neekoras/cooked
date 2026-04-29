@@ -22,9 +22,10 @@ function CourseRow({ course, isActive, onSelect }) {
     : 'var(--red)';
 
   return (
-    <div
+    <button
       className={`ck-course-row ${isActive ? 'is-active' : ''}`}
       onClick={onSelect}
+      aria-current={isActive ? 'true' : undefined}
     >
       <div className="ck-course-info">
         <div className="ck-course-name">{course.name}</div>
@@ -42,7 +43,7 @@ function CourseRow({ course, isActive, onSelect }) {
           <div style={{ color: 'var(--text-3)', fontSize: '12px' }}>—</div>
         )}
       </div>
-    </div>
+    </button>
   );
 }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { loadCourseData, fetchAllCourses, getCourseId, setApiBase } from '../api/canvasClient';
 import { calculateGrade, solveInverse, normalizeGradingScheme } from '../math/gradeEngine';
 import GradeDisplay from './GradeDisplay';
@@ -80,7 +80,7 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
       if (!url) return;
       try {
         const { origin } = new URL(url);
-        if (origin.includes('instructure.com')) {
+        if (/^https:\/\/[^/]+\.instructure\.com$/.test(origin)) {
           setApiBase(origin);
           setApiReady(true);
         }
@@ -106,6 +106,8 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
 
   // Per-course grade data — cached by course ID
   const courseCache = useRef({});
+  // Tracks the latest load request to discard stale responses on fast switching
+  const loadRequestRef = useRef(0);
   const [courseData, setCourseData] = useState({
     status: 'idle',
     groups: null,
@@ -133,7 +135,7 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
         setCoursesStatus('ready');
       })
       .catch(() => setCoursesStatus('error'));
-  }, [isOpen, coursesStatus]);
+  }, [open, coursesStatus, apiReady]);
 
   // Load grade data for the active course (with cache)
   useEffect(() => {
@@ -146,16 +148,20 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
 
     setCourseData({ status: 'loading', groups: null, isWeighted: false, enrollmentGrade: null, error: null });
 
+    const requestId = ++loadRequestRef.current;
+
     loadCourseData(activeCourseId)
       .then(({ groups, isWeighted, enrollmentGrade, gradingScheme }) => {
+        if (requestId !== loadRequestRef.current) return; // stale — user switched course
         const entry = { groups, isWeighted, enrollmentGrade, gradingScheme: normalizeGradingScheme(gradingScheme) };
         courseCache.current[activeCourseId] = entry;
         setCourseData({ ...entry, status: 'ready', error: null });
       })
       .catch(err => {
+        if (requestId !== loadRequestRef.current) return;
         setCourseData({ status: 'error', groups: null, isWeighted: false, enrollmentGrade: null, error: err.message });
       });
-  }, [isOpen, activeCourseId]);
+  }, [open, apiReady, activeCourseId]);
 
   const { grade, groupResults } = useMemo(() => {
     if (!courseData.groups) return { grade: null, groupResults: [] };
@@ -167,8 +173,9 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
     return solveInverse(groupResults, targetPercent, courseData.isWeighted);
   }, [groupResults, targetPercent, courseData.isWeighted]);
 
-  function handleCourseSelect(courseId) {
+  const handleCourseSelect = useCallback((courseId) => {
     const id = String(courseId);
+    if (!/^\d+$/.test(id)) return; // reject non-numeric IDs
     setActiveCourseId(id);
     setView('course');
     setActiveTab('Breakdown');
@@ -177,19 +184,22 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
     const target = `/courses/${id}/grades`;
     if (embedded) {
       chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-        const url = new URL(tab.url);
-        if (!url.pathname.startsWith(target)) {
-          chrome.tabs.update(tab.id, { url: url.origin + target });
-        }
+        if (!tab?.url) return;
+        try {
+          const url = new URL(tab.url);
+          if (!url.pathname.startsWith(target)) {
+            chrome.tabs.update(tab.id, { url: url.origin + target });
+          }
+        } catch {}
       });
     } else if (!window.location.pathname.startsWith(target)) {
       window.location.href = target;
     }
-  }
+  }, [embedded]);
 
   const activeCourse = courseList.find(c => String(c.id) === String(activeCourseId));
 
-  const panelStyle = embedded ? {
+  const panelStyle = useMemo(() => embedded ? {
     position: 'relative',
     width: '100%',
     height: '100%',
@@ -197,7 +207,7 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
     borderLeft: 'none',
     boxShadow: 'none',
     zIndex: 'auto',
-  } : {};
+  } : {}, [embedded]);
 
   return (
     <>
@@ -298,6 +308,8 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
                 onClick={() => setActiveTab(tab)}
                 role="tab"
                 aria-selected={activeTab === tab}
+                aria-controls={`ck-panel-${tab.toLowerCase()}`}
+                id={`ck-tab-${tab.toLowerCase()}`}
               >
                 {tab}
               </button>
@@ -328,26 +340,41 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
               {courseData.status === 'error' && <ErrorState message={courseData.error} />}
               {courseData.status === 'ready' && (
                 <>
-                  {activeTab === 'Breakdown' && (
+                  <div
+                    id="ck-panel-breakdown"
+                    role="tabpanel"
+                    aria-labelledby="ck-tab-breakdown"
+                    hidden={activeTab !== 'Breakdown'}
+                  >
                     <Breakdown
                       groupResults={groupResults}
                       inverseResults={inverseResults}
                     />
-                  )}
-                  {activeTab === 'Panic' && (
+                  </div>
+                  <div
+                    id="ck-panel-panic"
+                    role="tabpanel"
+                    aria-labelledby="ck-tab-panic"
+                    hidden={activeTab !== 'Panic'}
+                  >
                     <PanicMode
                       groupResults={groupResults}
                       targetPercent={targetPercent}
                       isWeighted={courseData.isWeighted}
                     />
-                  )}
-                  {activeTab === 'Share' && (
+                  </div>
+                  <div
+                    id="ck-panel-share"
+                    role="tabpanel"
+                    aria-labelledby="ck-tab-share"
+                    hidden={activeTab !== 'Share'}
+                  >
                     <ShareCard
                       grade={grade}
                       targetPercent={targetPercent}
                       inverseResults={inverseResults}
                     />
-                  )}
+                  </div>
                 </>
               )}
             </>

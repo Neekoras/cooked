@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { isGraded } from '../math/gradeEngine';
 
 function formatDue(iso) {
@@ -104,7 +104,7 @@ function GroupSection({ group, inverseMap }) {
 
   return (
     <div className="ck-group">
-      <div className="ck-group-header" onClick={() => setOpen(v => !v)}>
+      <button className="ck-group-header" onClick={() => setOpen(v => !v)} aria-expanded={open}>
         <span className="ck-group-name">{group.name}</span>
         {group.group_weight != null && (
           <span className="ck-group-weight">{group.group_weight}%</span>
@@ -113,7 +113,7 @@ function GroupSection({ group, inverseMap }) {
           {score.percent !== null ? `${score.percent.toFixed(1)}%` : 'No grades'}
         </span>
         <span className={`ck-chevron ${open ? 'is-open' : ''}`}>▾</span>
-      </div>
+      </button>
 
       {open && allAssignments.map(a => (
         <AssignmentRow
@@ -128,11 +128,13 @@ function GroupSection({ group, inverseMap }) {
 }
 
 export default function Breakdown({ groupResults, inverseResults }) {
-  // Index inverse results by assignmentId for O(1) lookup
-  const inverseMap = {};
-  for (const r of (inverseResults || [])) {
-    inverseMap[r.assignmentId] = r;
-  }
+  const inverseMap = useMemo(() => {
+    const map = {};
+    for (const r of (inverseResults || [])) {
+      map[r.assignmentId] = r;
+    }
+    return map;
+  }, [inverseResults]);
 
   if (!groupResults || groupResults.length === 0) {
     return <div className="ck-empty">No assignment groups found.</div>;

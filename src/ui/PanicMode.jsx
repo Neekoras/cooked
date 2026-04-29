@@ -60,7 +60,7 @@ export default function PanicMode({ groupResults, targetPercent, isWeighted }) {
           </select>
 
           {result && (
-            <div className="ck-result-card">
+            <div className="ck-result-card" role="status" aria-live="polite">
               <p className="ck-result-label">
                 To get {percentToLetter(targetPercent)} ({targetPercent}%) you need on{' '}
                 <strong style={{ color: 'var(--text)' }}>{result.assignmentName}</strong>:
