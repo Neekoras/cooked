@@ -78,6 +78,14 @@ const NOISE_WORDS = new Set([
 
 function abbrev(course) {
   const name = course.name.trim();
+
+  // 0. Try courseCode first — Canvas often has "ENG101", "MATH-200", "BIO_H"
+  //    Strip trailing digits/section markers to get the subject prefix.
+  if (course.courseCode) {
+    const codeAlpha = course.courseCode.replace(/[^a-zA-Z]/g, '');
+    if (codeAlpha.length >= 2 && codeAlpha.length <= 6) return codeAlpha.toUpperCase();
+  }
+
   const words = name.split(/\s+/).filter(w => w.length > 0);
 
   // If it's 1-2 short words already (e.g. "PE", "Art"), use as-is
