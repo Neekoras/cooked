@@ -10,6 +10,72 @@ import CourseList from './CourseList';
 
 const COURSE_TABS = ['Breakdown', 'Panic', 'Share'];
 
+// Subject-keyword → canonical abbreviation lookup.
+// Checked against each word in the course name (after stripping punctuation).
+// First match wins — order matters (e.g. "physical" should map to PE before
+// "education" maps to EDU).
+const SUBJECT_ABBREVS = {
+  english:     'ENG',
+  literature:  'LIT',
+  composition: 'COMP',
+  writing:     'WRIT',
+  reading:     'READ',
+  math:        'MATH',
+  mathematics: 'MATH',
+  algebra:     'ALG',
+  geometry:    'GEOM',
+  calculus:    'CALC',
+  statistics:  'STAT',
+  trigonometry:'TRIG',
+  biology:     'BIO',
+  chemistry:   'CHEM',
+  physics:     'PHYS',
+  science:     'SCI',
+  history:     'HIST',
+  geography:   'GEOG',
+  government:  'GOV',
+  economics:   'ECON',
+  psychology:  'PSYCH',
+  sociology:   'SOC',
+  philosophy:  'PHIL',
+  spanish:     'SPA',
+  french:      'FRE',
+  german:      'GER',
+  latin:       'LAT',
+  mandarin:    'MAN',
+  chinese:     'CHN',
+  japanese:    'JPN',
+  art:         'ART',
+  music:       'MUS',
+  band:        'BAND',
+  choir:       'CHOR',
+  theater:     'THEA',
+  drama:       'DRAM',
+  dance:       'DANCE',
+  physical:    'PE',
+  health:      'HLTH',
+  engineering: 'ENG',
+  computer:    'CS',
+  programming: 'CS',
+  robotics:    'ROBO',
+  business:    'BUS',
+  marketing:   'MKTG',
+  design:      'DES',
+  photography:'PHOTO',
+  journalism:  'JRN',
+  speech:      'SPCH',
+  debate:      'DEB',
+};
+
+// Noise words that appear in Canvas course names but carry no subject meaning.
+// Stripped before building initialisms so "Period 3 English 10" → "English 10" → ENG.
+const NOISE_WORDS = new Set([
+  'period', 'per', 'p', 'sec', 'section', 'sect', 'sem', 'semester',
+  'term', 'fall', 'spring', 'winter', 'summer', 'block', 'hr', 'hour',
+  'ap', 'honors', 'hon', 'honour', 'advanced', 'intro', 'introduction',
+  'foundations', 'foundation', 'fundamentals', 'prep', 'pre',
+]);
+
 function abbrev(course) {
   const name = course.name.trim();
   const words = name.split(/\s+/).filter(w => w.length > 0);
@@ -17,12 +83,36 @@ function abbrev(course) {
   // If it's 1-2 short words already (e.g. "PE", "Art"), use as-is
   if (words.length <= 2 && name.length <= 6) return name.toUpperCase();
 
-  // Multi-word: build initialism (e.g. "Physical Education" → "PE")
-  const initials = words.map(w => w[0]).join('').toUpperCase();
-  if (initials.length >= 2 && initials.length <= 5) return initials;
+  // 1. Try subject-keyword match against each word (after stripping punctuation/numbers)
+  for (const w of words) {
+    const clean = w.toLowerCase().replace(/[^a-z]/g, '');
+    if (clean && SUBJECT_ABBREVS[clean]) return SUBJECT_ABBREVS[clean];
+  }
 
-  // Fall back: first 4 chars of first word
-  return words[0].slice(0, 4).toUpperCase();
+  // 2. Filter out pure numbers, noise words, and section markers,
+  //    then build an initialism from the remaining alphabetical words.
+  const alphaWords = words.filter(w => {
+    const clean = w.replace(/[^a-zA-Z]/g, '');
+    if (!clean) return false;                       // pure number
+    if (NOISE_WORDS.has(clean.toLowerCase())) return false; // noise
+    return true;
+  });
+
+  if (alphaWords.length > 0) {
+    // Short alpha name — use as-is
+    if (alphaWords.length <= 2 && alphaWords.join('').length <= 6) {
+      return alphaWords.join('').toUpperCase();
+    }
+    const initials = alphaWords.map(w => w.replace(/[^a-zA-Z]/g, '')[0]).join('').toUpperCase();
+    if (initials.length >= 2 && initials.length <= 5) return initials;
+    return alphaWords[0].replace(/[^a-zA-Z]/g, '').slice(0, 4).toUpperCase();
+  }
+
+  // 3. Fallback: first non-number word's first 4 chars
+  const firstAlpha = words.find(w => /[a-zA-Z]/.test(w));
+  return firstAlpha
+    ? firstAlpha.replace(/[^a-zA-Z]/g, '').slice(0, 4).toUpperCase()
+    : words[0].slice(0, 4).toUpperCase();
 }
 
 function QuickSwitcher({ courses, activeCourseId, onSelect }) {
