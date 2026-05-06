@@ -26,8 +26,8 @@ export default function GradeDisplay({ grade, canvasGrade, isWeighted, gradingSc
 
   const gradeColor = grade === null
     ? 'var(--text-2)'
-    : grade >= 90 ? 'var(--green)'
-    : grade >= 70 ? 'var(--text)'
+    : grade >= 80 ? 'var(--green)'
+    : grade >= 60 ? 'var(--text)'
     : 'var(--red)';
 
   // Auto-updating time-ago label — refreshes every 30s while mounted

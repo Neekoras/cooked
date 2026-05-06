@@ -533,6 +533,9 @@
 .ck-gpa-label { font-size: 11px; color: var(--text-3); }
 
 /* ─── Course list ─────────────────────────────────────────────────────── */
+.ck-course-search {
+  padding: 0 20px 10px;
+}
 .ck-course-row {
   display: flex;
   align-items: center;
@@ -638,6 +641,13 @@
 .ck-result-number.is-impossible { color: var(--red-hi); }
 .ck-result-number.is-achieved   { color: var(--green-hi); }
 .ck-result-sub { font-size: 12px; color: var(--text-2); margin-bottom: 12px; }
+.ck-result-best {
+  font-size: 12px;
+  color: var(--accent);
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
 
 /* ─── Share card ──────────────────────────────────────────────────────── */
 .ck-share-body { padding: 0 20px 20px; }

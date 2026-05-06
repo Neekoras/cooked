@@ -1,5 +1,74 @@
 import { useState, useMemo } from 'react';
-import { solvePanic, percentToLetter, percentToLetterWithScheme, isPanicEligible, calculateGrade, solvePanic as _sp } from '../math/gradeEngine';
+import { solvePanic, percentToLetter, isPanicEligible, calculateGrade } from '../math/gradeEngine';
+
+/**
+ * Compute the projected overall grade if the student scores `scorePct`% on
+ * the selected assignment and their group average on all other remaining work.
+ * Returns the overall percentage or null.
+ */
+function projectGrade(groupResults, assignmentId, scorePct, isWeighted) {
+  // Deep-clone the group results so we can mutate scores
+  const clone = groupResults.map(g => ({
+    ...g,
+    score: { ...g.score },
+    remaining: [...g.remaining],
+    assignments: (g.assignments || []).map(a => ({
+      ...a,
+      submission: a.submission ? { ...a.submission } : null,
+    })),
+  }));
+
+  // Find and score the target assignment
+  for (const g of clone) {
+    const a = g.assignments.find(a => String(a.id) === String(assignmentId));
+    if (!a) continue;
+    // Mark it as graded with the hypothetical score
+    const pts = a.points_possible;
+    a.submission = {
+      ...a.submission,
+      workflow_state: 'graded',
+      score: (scorePct / 100) * pts,
+      missing: false,
+      late_policy_status: null,
+    };
+    break;
+  }
+
+  // Also score all other remaining assignments at group average
+  for (const g of clone) {
+    const graded = g.assignments.filter(a => {
+      const sub = a.submission;
+      return sub && sub.workflow_state === 'graded' && sub.score !== null && !sub.excused;
+    });
+    let avg = 0.75;
+    if (graded.length > 0) {
+      let e = 0, p = 0;
+      for (const a of graded) {
+        if (a.points_possible > 0) { e += a.submission.score; p += a.points_possible; }
+      }
+      if (p > 0) avg = e / p;
+    }
+    for (const a of g.assignments) {
+      if (!a.submission || a.submission.workflow_state !== 'graded') {
+        a.submission = {
+          ...a.submission,
+          workflow_state: 'graded',
+          score: avg * a.points_possible,
+          missing: false,
+          late_policy_status: null,
+        };
+      }
+    }
+  }
+
+  // Recalculate with all assignments "graded"
+  const result = calculateGrade(clone.map(g => ({
+    ...g,
+    assignments: g.assignments,
+  })), isWeighted);
+
+  return result.grade;
+}
 
 export default function PanicMode({ groupResults, targetPercent, isWeighted }) {
   const [selectedId, setSelectedId] = useState('');
@@ -98,6 +167,17 @@ export default function PanicMode({ groupResults, targetPercent, isWeighted }) {
                   <p className="ck-result-sub">
                     That's above 100% — not achievable. Consider adjusting your target.
                   </p>
+                  {(() => {
+                    const bestGrade = projectGrade(groupResults, selectedId, 100, isWeighted);
+                    if (bestGrade !== null) {
+                      return (
+                        <p className="ck-result-best">
+                          Best possible with 100%: <strong>{bestGrade.toFixed(1)}%</strong> ({percentToLetter(bestGrade)})
+                        </p>
+                      );
+                    }
+                    return null;
+                  })()}
                 </>
               ) : (
                 <>

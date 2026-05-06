@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { percentToGPA, percentToLetter, calcGPA } from '../math/gradeEngine';
 
 function LoadingState() {
@@ -52,6 +52,24 @@ const CourseRow = React.memo(function CourseRow({ course, isActive, onSelect }) 
 });
 
 export default function CourseList({ courses, status, activeCourseId, onSelect }) {
+  const [query, setQuery] = useState('');
+
+  const filteredCourses = useMemo(() => {
+    if (!query.trim()) return courses;
+    const q = query.toLowerCase();
+    return courses.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      (c.courseCode && c.courseCode.toLowerCase().includes(q))
+    );
+  }, [courses, query]);
+
+  const handleSearchKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') {
+      setQuery('');
+      e.target.blur();
+    }
+  }, []);
+
   if (status === 'loading' || status === 'idle') return <LoadingState />;
   if (status === 'error') return (
     <div className="ck-empty">Couldn't load courses.</div>
@@ -71,13 +89,29 @@ export default function CourseList({ courses, status, activeCourseId, onSelect }
         </div>
       </div>
 
+      {courses.length > 5 && (
+        <div className="ck-course-search">
+          <input
+            type="text"
+            className="ck-input"
+            placeholder="Search courses…"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+          />
+        </div>
+      )}
+
       <div className="ck-section-title">Your courses</div>
 
-      {courses.length === 0 && (
+      {filteredCourses.length === 0 && query && (
+        <div className="ck-empty">No courses match "{query}"</div>
+      )}
+      {filteredCourses.length === 0 && !query && (
         <div className="ck-empty">No active courses found.</div>
       )}
 
-      {courses.map(course => (
+      {filteredCourses.map(course => (
         <CourseRow
           key={course.id}
           course={course}
