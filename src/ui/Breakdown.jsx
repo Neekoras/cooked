@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { isGraded, isRemaining } from '../math/gradeEngine';
 
 function formatDue(iso) {
@@ -7,7 +7,7 @@ function formatDue(iso) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function AssignmentRow({ assignment, inverseResult, isDropped }) {
+const AssignmentRow = React.memo(function AssignmentRow({ assignment, inverseResult, isDropped }) {
   const graded = isGraded(assignment);
   const sub = assignment.submission;
   const isMissing = !graded && (sub?.missing === true || sub?.late_policy_status === 'missing');
@@ -84,9 +84,9 @@ function AssignmentRow({ assignment, inverseResult, isDropped }) {
       </div>
     </div>
   );
-}
+});
 
-function GroupSection({ group, inverseMap, startCollapsed }) {
+const GroupSection = React.memo(function GroupSection({ group, inverseMap, startCollapsed }) {
   const [open, setOpen] = useState(!startCollapsed);
   const score = group.score;
   const remaining = group.remaining || [];
@@ -138,7 +138,7 @@ function GroupSection({ group, inverseMap, startCollapsed }) {
       ))}
     </div>
   );
-}
+});
 
 export default function Breakdown({ groupResults, inverseResults }) {
   const inverseMap = useMemo(() => {

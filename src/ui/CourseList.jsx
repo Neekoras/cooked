@@ -1,3 +1,4 @@
+import React from 'react';
 import { percentToGPA, percentToLetter, calcGPA } from '../math/gradeEngine';
 
 function LoadingState() {
@@ -9,7 +10,7 @@ function LoadingState() {
   );
 }
 
-function CourseRow({ course, isActive, onSelect }) {
+const CourseRow = React.memo(function CourseRow({ course, isActive, onSelect }) {
   const { currentScore: score, currentGrade: canvasGrade } = course;
   const letter = canvasGrade ?? (score !== null ? percentToLetter(score) : null);
   const gpaPoints = score !== null ? percentToGPA(score) : null;
@@ -48,7 +49,7 @@ function CourseRow({ course, isActive, onSelect }) {
       </div>
     </button>
   );
-}
+});
 
 export default function CourseList({ courses, status, activeCourseId, onSelect }) {
   if (status === 'loading' || status === 'idle') return <LoadingState />;

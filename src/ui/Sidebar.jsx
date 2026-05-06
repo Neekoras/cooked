@@ -465,8 +465,12 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
           )}
 
           {view === 'course' && !apiReady && (
-            <div className="ck-empty" style={{ paddingTop: 40 }}>
-              Open a Canvas page first, then come back here.
+            <div className="ck-empty-state">
+              <div className="ck-empty-icon">🔗</div>
+              <p className="ck-empty-title">Not on Canvas</p>
+              <p className="ck-empty-body">
+                Navigate to any page on your school's Canvas site, then come back here.
+              </p>
             </div>
           )}
 
