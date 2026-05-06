@@ -78,26 +78,27 @@ const NOISE_WORDS = new Set([
 
 function abbrev(course) {
   const name = course.name.trim();
-
-  // 0. Try courseCode first — Canvas often has "ENG101", "MATH-200", "BIO_H"
-  //    Strip trailing digits/section markers to get the subject prefix.
-  if (course.courseCode) {
-    const codeAlpha = course.courseCode.replace(/[^a-zA-Z]/g, '');
-    if (codeAlpha.length >= 2 && codeAlpha.length <= 6) return codeAlpha.toUpperCase();
-  }
-
   const words = name.split(/\s+/).filter(w => w.length > 0);
 
   // If it's 1-2 short words already (e.g. "PE", "Art"), use as-is
   if (words.length <= 2 && name.length <= 6) return name.toUpperCase();
 
   // 1. Try subject-keyword match against each word (after stripping punctuation/numbers)
+  //    This gives the best canonical abbreviations (ENG, MATH, BIO, CHEM).
   for (const w of words) {
     const clean = w.toLowerCase().replace(/[^a-z]/g, '');
     if (clean && SUBJECT_ABBREVS[clean]) return SUBJECT_ABBREVS[clean];
   }
 
-  // 2. Filter out pure numbers, noise words, and section markers,
+  // 2. Try courseCode — Canvas often stores "ENG101", "MATH-200", "BIO_H"
+  //    Strip digits/punctuation to get the subject prefix.
+  //    Do this AFTER the keyword map so canonical forms (ENG > EN) win.
+  if (course.courseCode) {
+    const codeAlpha = course.courseCode.replace(/[^a-zA-Z]/g, '');
+    if (codeAlpha.length >= 2 && codeAlpha.length <= 6) return codeAlpha.toUpperCase();
+  }
+
+  // 3. Filter out pure numbers, noise words, and section markers,
   //    then build an initialism from the remaining alphabetical words.
   const alphaWords = words.filter(w => {
     const clean = w.replace(/[^a-zA-Z]/g, '');
@@ -116,7 +117,7 @@ function abbrev(course) {
     return alphaWords[0].replace(/[^a-zA-Z]/g, '').slice(0, 4).toUpperCase();
   }
 
-  // 3. Fallback: first non-number word's first 4 chars
+  // 4. Fallback: first non-number word's first 4 chars
   const firstAlpha = words.find(w => /[a-zA-Z]/.test(w));
   return firstAlpha
     ? firstAlpha.replace(/[^a-zA-Z]/g, '').slice(0, 4).toUpperCase()
