@@ -9,6 +9,10 @@ export default function GradeDisplay({ grade, canvasGrade, isWeighted, gradingSc
     canvasGrade?.currentScore !== undefined &&
     Math.abs(grade - canvasGrade.currentScore) > 0.5;
 
+  const discrepancyDelta = hasDiscrepancy
+    ? (grade - canvasGrade.currentScore).toFixed(1)
+    : null;
+
   const gradeColor = grade === null
     ? 'var(--text-2)'
     : grade >= 90 ? 'var(--green)'
@@ -24,6 +28,9 @@ export default function GradeDisplay({ grade, canvasGrade, isWeighted, gradingSc
         {letter && (
           <span className="ck-grade-letter">{letter}</span>
         )}
+        {canvasGrade?.currentGrade && (
+          <span className="ck-grade-canvas-letter">{canvasGrade.currentGrade}</span>
+        )}
       </div>
 
       <p className="ck-grade-meta">
@@ -33,9 +40,13 @@ export default function GradeDisplay({ grade, canvasGrade, isWeighted, gradingSc
       {hasDiscrepancy && (
         <div className="ck-discrepancy">
           <strong>Canvas shows {canvasGrade.currentScore?.toFixed(1)}%</strong>
-          {' '}— our calculation says {grade.toFixed(1)}%.{' '}
-          This is usually caused by hidden grades or unsubmitted assignments
-          being counted differently.
+          {discrepancyDelta > 0 && (
+            <> — our calc is <span style={{ color: 'var(--green-hi)' }}>+{discrepancyDelta}%</span> higher</>
+          )}
+          {discrepancyDelta < 0 && (
+            <> — our calc is <span style={{ color: 'var(--red-hi)' }}>{discrepancyDelta}%</span> lower</>
+          )}
+          . Usually caused by hidden or unposted assignments.
         </div>
       )}
     </div>

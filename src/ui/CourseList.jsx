@@ -28,10 +28,13 @@ function CourseRow({ course, isActive, onSelect }) {
       aria-current={isActive ? 'true' : undefined}
     >
       <div className="ck-course-info">
-        <div className="ck-course-name">{course.name}</div>
-        {gpaPoints !== null && (
-          <div className="ck-course-gpa-pts">{gpaPoints.toFixed(1)} GPA pts</div>
-        )}
+        <div className="ck-course-name">
+          {course.name}
+        </div>
+        <div className="ck-course-meta">
+          {course.courseCode && <span className="ck-course-code">{course.courseCode}</span>}
+          {gpaPoints !== null && <span>{gpaPoints.toFixed(1)} GPA pts</span>}
+        </div>
       </div>
       <div className="ck-course-grade" style={{ color: scoreColor }}>
         {score !== null ? (

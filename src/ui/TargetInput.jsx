@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { letterToPercentWithScheme, percentToLetterWithScheme } from '../math/gradeEngine';
 
 export default function TargetInput({ onChange, gradingScheme }) {
@@ -43,22 +43,47 @@ export default function TargetInput({ onChange, gradingScheme }) {
     return 'e.g. B+ or 87';
   }, [parsed, error, gradingScheme]);
 
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') {
+      setValue('');
+      e.target.blur();
+    }
+  }, []);
+
+  const clearInput = useCallback(() => {
+    setValue('');
+  }, []);
+
+  const hasValue = value.trim() !== '';
+
   return (
     <div className="ck-target-section">
       <label className="ck-label" htmlFor="ck-target">
         Target grade
       </label>
-      <input
-        id="ck-target"
-        className="ck-input"
-        type="text"
-        placeholder="A, B+, 87…"
-        value={value}
-        onChange={e => setValue(e.target.value)}
-        style={error ? { borderColor: 'var(--red)' } : undefined}
-        autoComplete="off"
-        spellCheck={false}
-      />
+      <div className="ck-input-wrap">
+        <input
+          id="ck-target"
+          className={`ck-input ${error ? 'is-error' : ''}`}
+          type="text"
+          placeholder="A, B+, 87…"
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          autoComplete="off"
+          spellCheck={false}
+        />
+        {hasValue && (
+          <button
+            className="ck-input-clear"
+            onClick={clearInput}
+            aria-label="Clear target"
+            tabIndex={-1}
+          >
+            ✕
+          </button>
+        )}
+      </div>
       <p
         className="ck-input-hint"
         style={error ? { color: 'var(--red)' } : undefined}
