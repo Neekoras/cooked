@@ -319,6 +319,12 @@
   text-transform: uppercase;
   color: var(--text-3);
 }
+.ck-section-count {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--accent);
+}
 
 /* ─── Summary stats ───────────────────────────────────────────────────── */
 .ck-summary-row {
@@ -360,6 +366,15 @@
   white-space: nowrap;
 }
 .ck-group-weight { font-size: 10px; color: var(--text-3); flex-shrink: 0; }
+.ck-group-remaining {
+  font-size: 10px;
+  color: var(--accent);
+  flex-shrink: 0;
+  padding: 1px 6px;
+  background: var(--accent-subtle);
+  border-radius: 100px;
+  font-weight: 600;
+}
 .ck-group-score  { font-size: 12px; font-weight: 600; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .ck-chevron      { font-size: 10px; color: var(--text-3); flex-shrink: 0; transition: transform 150ms; }
 .ck-chevron.is-open { transform: rotate(180deg); }
@@ -680,7 +695,9 @@
 .ck-tab-btn:focus-visible,
 .ck-btn:focus-visible,
 .ck-group-header:focus-visible,
-.ck-course-row:focus-visible {
+.ck-course-row:focus-visible,
+.ck-select:focus-visible,
+.ck-input:focus-visible {
   outline: 2px solid var(--border-focus);
   outline-offset: 2px;
 }
