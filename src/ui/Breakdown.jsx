@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { isGraded } from '../math/gradeEngine';
+import { isGraded, isRemaining } from '../math/gradeEngine';
 
 function formatDue(iso) {
   if (!iso) return null;
@@ -86,9 +86,10 @@ function AssignmentRow({ assignment, inverseResult, isDropped }) {
   );
 }
 
-function GroupSection({ group, inverseMap }) {
-  const [open, setOpen] = useState(true);
+function GroupSection({ group, inverseMap, startCollapsed }) {
+  const [open, setOpen] = useState(!startCollapsed);
   const score = group.score;
+  const remaining = group.remaining || [];
 
   const scoreColor =
     score.percent === null ? 'var(--text-3)'
@@ -102,6 +103,15 @@ function GroupSection({ group, inverseMap }) {
 
   if (allAssignments.length === 0) return null;
 
+  // Sort: remaining assignments first (so inverse results are visible immediately)
+  const sortedAssignments = [...allAssignments].sort((a, b) => {
+    const aRem = isRemaining(a);
+    const bRem = isRemaining(b);
+    if (aRem && !bRem) return -1;
+    if (!aRem && bRem) return 1;
+    return 0;
+  });
+
   return (
     <div className="ck-group">
       <button className="ck-group-header" onClick={() => setOpen(v => !v)} aria-expanded={open}>
@@ -109,13 +119,16 @@ function GroupSection({ group, inverseMap }) {
         {group.group_weight != null && (
           <span className="ck-group-weight">{group.group_weight}%</span>
         )}
+        {remaining.length > 0 && (
+          <span className="ck-group-remaining">{remaining.length} left</span>
+        )}
         <span className="ck-group-score ck-mono" style={{ color: scoreColor }}>
           {score.percent !== null ? `${score.percent.toFixed(1)}%` : 'No grades'}
         </span>
         <span className={`ck-chevron ${open ? 'is-open' : ''}`}>▾</span>
       </button>
 
-      {open && allAssignments.map(a => (
+      {open && sortedAssignments.map(a => (
         <AssignmentRow
           key={a.id}
           assignment={a}
@@ -140,11 +153,34 @@ export default function Breakdown({ groupResults, inverseResults }) {
     return <div className="ck-empty">No assignment groups found.</div>;
   }
 
+  // Auto-collapse groups when there are many of them
+  const shouldCollapse = groupResults.length > 3;
+
+  // Summary stats
+  const totalGraded = groupResults.reduce((s, g) => s + g.score.gradedCount, 0);
+  const totalRemaining = groupResults.reduce((s, g) => s + (g.remaining?.length ?? 0), 0);
+  const totalDropped = groupResults.reduce((s, g) => s + (g.score.droppedIds?.size ?? 0), 0);
+
   return (
     <div>
-      <div className="ck-section-title">Assignment breakdown</div>
+      <div className="ck-section-title">
+        Assignment breakdown
+        {totalRemaining > 0 && (
+          <span className="ck-section-count"> · {totalRemaining} remaining</span>
+        )}
+      </div>
+      <div className="ck-summary-row">
+        <span className="ck-summary-stat">{totalGraded} graded</span>
+        {totalRemaining > 0 && <span className="ck-summary-stat ck-summary-remaining">{totalRemaining} remaining</span>}
+        {totalDropped > 0 && <span className="ck-summary-stat">{totalDropped} dropped</span>}
+      </div>
       {groupResults.map(g => (
-        <GroupSection key={g.id} group={g} inverseMap={inverseMap} />
+        <GroupSection
+          key={g.id}
+          group={g}
+          inverseMap={inverseMap}
+          startCollapsed={shouldCollapse}
+        />
       ))}
     </div>
   );

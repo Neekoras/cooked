@@ -275,7 +275,7 @@
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px var(--accent-subtle), 0 0 0 1px var(--accent);
 }
-.ck-input::placeholder { color: var(--text-2); opacity: 1; }
+.ck-input::placeholder { color: var(--text-3); opacity: 1; }
 .ck-input-hint {
   margin-top: 5px;
   font-size: 11px;
@@ -318,6 +318,20 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-3);
+}
+
+/* ─── Summary stats ───────────────────────────────────────────────────── */
+.ck-summary-row {
+  display: flex;
+  gap: 12px;
+  padding: 0 20px 10px;
+}
+.ck-summary-stat {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.ck-summary-remaining {
+  color: var(--accent);
 }
 
 /* ─── Breakdown ───────────────────────────────────────────────────────── */
@@ -502,6 +516,20 @@
   transition: border-color 120ms;
 }
 .ck-select:focus { border-color: var(--border-focus); }
+.ck-select optgroup {
+  font-weight: 600;
+  color: var(--text-2);
+  background: var(--bg);
+}
+.ck-select option {
+  font-weight: 400;
+  color: var(--text);
+  background: var(--surface);
+}
+.ck-select:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
 
 .ck-result-card {
   margin-top: 16px;
@@ -562,6 +590,10 @@
   color: var(--accent);
   margin-bottom: 8px;
 }
+.ck-card-headline.ck-accent-green  { color: var(--green); }
+.ck-card-headline.ck-accent-red    { color: var(--red-hi); }
+.ck-card-headline.ck-accent-amber  { color: var(--accent); }
+.ck-card-headline.ck-accent-yellow { color: var(--yellow-hi); }
 .ck-card-sub { font-size: 13px; color: var(--text-2); }
 .ck-card-url {
   position: absolute;

@@ -472,6 +472,7 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
                       grade={grade}
                       targetPercent={targetPercent}
                       inverseResults={inverseResults}
+                      courseName={activeCourse?.name}
                     />
                   </div>
                 </>

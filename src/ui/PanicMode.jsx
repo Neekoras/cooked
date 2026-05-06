@@ -52,11 +52,28 @@ export default function PanicMode({ groupResults, targetPercent, isWeighted }) {
             onChange={e => setSelectedId(e.target.value)}
           >
             <option value="">Select assignment…</option>
-            {options.map(o => (
-              <option key={o.id} value={o.id}>
-                {o.name} ({o.pts} pts)
-              </option>
-            ))}
+            {(() => {
+              // Group options by assignment group for easier scanning
+              const groups = [];
+              let lastGroup = null;
+              for (const o of options) {
+                if (o.groupName !== lastGroup) {
+                  lastGroup = o.groupName;
+                  groups.push({ name: lastGroup, items: [o] });
+                } else {
+                  groups[groups.length - 1].items.push(o);
+                }
+              }
+              return groups.map(g => (
+                <optgroup key={g.name} label={g.name}>
+                  {g.items.map(o => (
+                    <option key={o.id} value={o.id}>
+                      {o.name} ({o.pts} pts)
+                    </option>
+                  ))}
+                </optgroup>
+              ));
+            })()}
           </select>
 
           {result && (

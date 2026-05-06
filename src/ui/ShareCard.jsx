@@ -1,7 +1,23 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { percentToLetter } from '../math/gradeEngine';
 
-function buildMessage(grade, targetPercent, inverseResults) {
+// Resolved hex colors for both Canvas 2D and inline style usage.
+// We use these directly instead of CSS variables so the share card
+// preview and PNG both render correct colors without relying on
+// CSS variable resolution (which doesn't work in canvas or inline styles).
+const ACCENT_COLORS = {
+  green:  '#4AAB7A',
+  red:    '#D14545',
+  amber:  '#C89A2C',
+  yellow: '#C8912C',
+};
+
+function buildMessage(grade, targetPercent, inverseResults, courseName) {
+  // Build a short course identifier (first 3-4 words max, ~25 chars)
+  const shortCourse = courseName
+    ? courseName.split(/\s+/).slice(0, 3).join(' ').slice(0, 25) + (courseName.length > 25 ? '…' : '')
+    : null;
+
   if (inverseResults?.length > 0) {
     const allAchieved = inverseResults.every(r => r.isAchieved);
     const anyImpossible = inverseResults.some(r => r.isImpossible);
@@ -13,8 +29,9 @@ function buildMessage(grade, targetPercent, inverseResults) {
       const letter = percentToLetter(targetPercent);
       return {
         line1: `${letter} is locked in`,
-        line2: 'Target already achieved — not cooked',
-        accent: 'var(--green)',
+        line2: shortCourse ? `${shortCourse}` : 'Target already achieved — not cooked',
+        accentKey: 'green',
+        accent: ACCENT_COLORS.green,
       };
     }
     if (minRequired) {
@@ -22,15 +39,17 @@ function buildMessage(grade, targetPercent, inverseResults) {
       const pct = minRequired.requiredPercent.toFixed(0);
       return {
         line1: `I only need a ${pct}%`,
-        line2: `to get ${letter !== 'F' ? `an ${letter}` : 'a passing grade'} — not cooked`,
-        accent: 'var(--accent)',
+        line2: shortCourse ? `to get ${letter !== 'F' ? `an ${letter}` : 'a passing grade'} in ${shortCourse}` : `to get ${letter !== 'F' ? `an ${letter}` : 'a passing grade'} — not cooked`,
+        accentKey: 'amber',
+        accent: ACCENT_COLORS.amber,
       };
     }
     if (anyImpossible) {
       return {
         line1: 'Might be cooked',
-        line2: `Target ${percentToLetter(targetPercent)} isn't achievable anymore`,
-        accent: 'var(--red)',
+        line2: shortCourse ? `${shortCourse} — target ${percentToLetter(targetPercent)} unreachable` : `Target ${percentToLetter(targetPercent)} isn't achievable anymore`,
+        accentKey: 'red',
+        accent: ACCENT_COLORS.red,
       };
     }
   }
@@ -38,12 +57,33 @@ function buildMessage(grade, targetPercent, inverseResults) {
   if (grade !== null) {
     return {
       line1: `Sitting at ${grade.toFixed(1)}%`,
-      line2: `${percentToLetter(grade)} — Cooked`,
-      accent: 'var(--accent)',
+      line2: shortCourse ? `${shortCourse} · ${percentToLetter(grade)}` : `${percentToLetter(grade)} — Cooked`,
+      accentKey: 'amber',
+      accent: ACCENT_COLORS.amber,
     };
   }
 
-  return { line1: 'Grade not loaded yet', line2: 'Open a Canvas course to get started', accent: 'var(--accent)' };
+  return { line1: 'Grade not loaded yet', line2: 'Open a Canvas course to get started', accentKey: 'amber', accent: ACCENT_COLORS.amber };
+}
+
+/**
+ * Draw a line of text with truncation if it exceeds maxWidth.
+ * Falls back character-by-character to find a fitting substring.
+ */
+function drawTextClamped(ctx, text, x, y, maxWidth) {
+  if (ctx.measureText(text).width <= maxWidth) {
+    ctx.fillText(text, x, y);
+    return;
+  }
+  // Binary-search for the longest prefix that fits (with "…" appended)
+  let lo = 0, hi = text.length;
+  while (lo < hi - 1) {
+    const mid = (lo + hi) >> 1;
+    const candidate = text.slice(0, mid) + '…';
+    if (ctx.measureText(candidate).width <= maxWidth) lo = mid;
+    else hi = mid;
+  }
+  ctx.fillText(text.slice(0, lo) + '…', x, y);
 }
 
 /**
@@ -73,30 +113,26 @@ function drawCard(message, canvas) {
   ctx.lineWidth = 1;
   ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
 
-  // Logo
+  // Logo — manual letter spacing since ctx.letterSpacing isn't standard
   ctx.fillStyle = '#665E55';
   ctx.font = '600 11px "DM Sans", system-ui, sans-serif';
-  ctx.letterSpacing = '0.15em';
-  ctx.fillText('COOKED', 28, 42);
+  const logoText = 'COOKED';
+  const logoSpacing = 1.8; // px between letters
+  let logoX = 28;
+  for (const ch of logoText) {
+    ctx.fillText(ch, logoX, 42);
+    logoX += ctx.measureText(ch).width + logoSpacing;
+  }
 
   // Main headline
-  const CSS_VAR_COLORS = {
-    'var(--green)': '#4AAB7A',
-    'var(--red)':   '#D14545',
-    'var(--accent)': '#C89A2C',
-    'var(--yellow)': '#C8912C',
-  };
-  ctx.fillStyle = CSS_VAR_COLORS[message.accent] ?? message.accent;
-
+  ctx.fillStyle = message.accent;
   ctx.font = 'bold 36px "Fraunces", Georgia, serif';
-  ctx.letterSpacing = '-0.02em';
-  ctx.fillText(message.line1, 28, 120);
+  drawTextClamped(ctx, message.line1, 28, 120, W - 56);
 
   // Sub line
   ctx.fillStyle = '#9C9389';
   ctx.font = '400 15px "DM Sans", system-ui, sans-serif';
-  ctx.letterSpacing = '0';
-  ctx.fillText(message.line2, 28, 152);
+  drawTextClamped(ctx, message.line2, 28, 152, W - 56);
 
   // URL watermark
   ctx.fillStyle = '#665E55';
@@ -104,11 +140,14 @@ function drawCard(message, canvas) {
   ctx.fillText('amIcooked.app', W - 28 - ctx.measureText('amIcooked.app').width, H - 18);
 }
 
-export default function ShareCard({ grade, targetPercent, inverseResults }) {
+export default function ShareCard({ grade, targetPercent, inverseResults, courseName }) {
   const canvasRef = useRef(null);
   const [downloaded, setDownloaded] = useState(false);
 
-  const message = buildMessage(grade, targetPercent, inverseResults);
+  const message = useMemo(
+    () => buildMessage(grade, targetPercent, inverseResults, courseName),
+    [grade, targetPercent, inverseResults, courseName]
+  );
 
   function handleDownload() {
     const canvas = document.createElement('canvas');
@@ -128,7 +167,7 @@ export default function ShareCard({ grade, targetPercent, inverseResults }) {
       {/* Preview — static DOM version of the card */}
       <div className="ck-card-preview">
         <div className="ck-card-logo">Cooked</div>
-        <div className="ck-card-headline" style={{ color: message.accent.startsWith('var') ? undefined : message.accent }}>
+        <div className={`ck-card-headline ck-accent-${message.accentKey ?? 'amber'}`}>
           {message.line1}
         </div>
         <div className="ck-card-sub">{message.line2}</div>
