@@ -127,6 +127,29 @@
   justify-content: space-between;
   margin-bottom: 10px;
 }
+.ck-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ck-refresh-btn {
+  background: none;
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  color: var(--text-3);
+  font-size: 14px;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 120ms, border-color 120ms;
+  padding: 0;
+}
+.ck-refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
+.ck-refresh-btn:active { transform: rotate(-180deg); }
 .ck-wordmark {
   font-family: 'Fraunces', Georgia, serif;
   font-size: 19px;
@@ -204,6 +227,10 @@
 .ck-grade-meta {
   font-size: 11px;
   color: var(--text-3);
+}
+.ck-grade-refreshed {
+  color: var(--text-2);
+  opacity: 0.6;
 }
 .ck-discrepancy {
   margin-top: 10px;
@@ -741,7 +768,8 @@
 .ck-group-header:focus-visible,
 .ck-course-row:focus-visible,
 .ck-select:focus-visible,
-.ck-input:focus-visible {
+.ck-input:focus-visible,
+.ck-refresh-btn:focus-visible {
   outline: 2px solid var(--border-focus);
   outline-offset: 2px;
 }

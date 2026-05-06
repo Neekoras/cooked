@@ -1,6 +1,16 @@
 import { percentToLetterWithScheme } from '../math/gradeEngine';
 
-export default function GradeDisplay({ grade, canvasGrade, isWeighted, gradingScheme }) {
+function formatTimeAgo(ts) {
+  if (!ts) return null;
+  const seconds = Math.floor((Date.now() - ts) / 1000);
+  if (seconds < 5) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  return `${Math.floor(minutes / 60)}h ago`;
+}
+
+export default function GradeDisplay({ grade, canvasGrade, isWeighted, gradingScheme, lastRefreshed }) {
   const letter = grade !== null ? percentToLetterWithScheme(grade, gradingScheme) : null;
 
   const hasDiscrepancy =
@@ -19,6 +29,8 @@ export default function GradeDisplay({ grade, canvasGrade, isWeighted, gradingSc
     : grade >= 70 ? 'var(--text)'
     : 'var(--red)';
 
+  const refreshedLabel = formatTimeAgo(lastRefreshed);
+
   return (
     <div>
       <div className="ck-grade-row">
@@ -35,6 +47,9 @@ export default function GradeDisplay({ grade, canvasGrade, isWeighted, gradingSc
 
       <p className="ck-grade-meta">
         {isWeighted ? 'Weighted groups' : 'Total points'} · calculated from Canvas data
+        {refreshedLabel && (
+          <> · <span className="ck-grade-refreshed">{refreshedLabel}</span></>
+        )}
       </p>
 
       {hasDiscrepancy && (

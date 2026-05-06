@@ -207,6 +207,8 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
   const courseCache = useRef({});
   // Tracks the latest load request to discard stale responses on fast switching
   const loadRequestRef = useRef(0);
+  // Timestamp of last successful data load
+  const [lastRefreshed, setLastRefreshed] = useState(null);
   const [courseData, setCourseData] = useState({
     status: 'idle',
     groups: null,
@@ -255,6 +257,7 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
         const entry = { groups, isWeighted, enrollmentGrade, gradingScheme: normalizeGradingScheme(gradingScheme) };
         courseCache.current[activeCourseId] = entry;
         setCourseData({ ...entry, status: 'ready', error: null });
+        setLastRefreshed(Date.now());
       })
       .catch(err => {
         if (requestId !== loadRequestRef.current) return;
@@ -271,6 +274,27 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
     if (!groupResults || targetPercent === null) return [];
     return solveInverse(groupResults, targetPercent, courseData.isWeighted);
   }, [groupResults, targetPercent, courseData.isWeighted]);
+
+  const handleRefresh = useCallback(() => {
+    if (!activeCourseId) return;
+    // Clear cache for this course so the effect will re-fetch
+    delete courseCache.current[activeCourseId];
+    // Bump the request ID to discard any in-flight request
+    const requestId = ++loadRequestRef.current;
+    setCourseData({ status: 'loading', groups: null, isWeighted: false, enrollmentGrade: null, error: null });
+    loadCourseData(activeCourseId)
+      .then(({ groups, isWeighted, enrollmentGrade, gradingScheme }) => {
+        if (requestId !== loadRequestRef.current) return;
+        const entry = { groups, isWeighted, enrollmentGrade, gradingScheme: normalizeGradingScheme(gradingScheme) };
+        courseCache.current[activeCourseId] = entry;
+        setCourseData({ ...entry, status: 'ready', error: null });
+        setLastRefreshed(Date.now());
+      })
+      .catch(err => {
+        if (requestId !== loadRequestRef.current) return;
+        setCourseData({ status: 'error', groups: null, isWeighted: false, enrollmentGrade: null, error: err.message });
+      });
+  }, [activeCourseId]);
 
   const handleCourseSelect = useCallback((courseId) => {
     const id = String(courseId);
@@ -355,9 +379,21 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
             {view === 'course' ? (
               <>
                 <div className="ck-wordmark">Cooked?</div>
-                <button className="ck-courses-btn" onClick={() => setView('courses')}>
-                  All Courses
-                </button>
+                <div className="ck-header-actions">
+                  {courseData.status === 'ready' && (
+                    <button
+                      className="ck-refresh-btn"
+                      onClick={handleRefresh}
+                      aria-label="Refresh grades"
+                      title="Refresh grades"
+                    >
+                      ↻
+                    </button>
+                  )}
+                  <button className="ck-courses-btn" onClick={() => setView('courses')}>
+                    All Courses
+                  </button>
+                </div>
               </>
             ) : (
               <>
@@ -379,6 +415,7 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
               canvasGrade={courseData.enrollmentGrade}
               isWeighted={courseData.isWeighted}
               gradingScheme={courseData.gradingScheme}
+              lastRefreshed={lastRefreshed}
             />
           )}
         </div>
