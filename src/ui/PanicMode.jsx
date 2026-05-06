@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { solvePanic, percentToLetter, isPanicEligible } from '../math/gradeEngine';
+import { solvePanic, percentToLetter, percentToLetterWithScheme, isPanicEligible, calculateGrade, solvePanic as _sp } from '../math/gradeEngine';
 
 export default function PanicMode({ groupResults, targetPercent, isWeighted }) {
   const [selectedId, setSelectedId] = useState('');

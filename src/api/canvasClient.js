@@ -6,13 +6,22 @@
  */
 
 const PER_PAGE = 100;
+const REQUEST_TIMEOUT = 15000; // 15 seconds
 
 // In content-script mode, API URLs are relative (resolves to the Canvas origin).
 // In side-panel mode, we must use an absolute base URL.
 let _base = '';
+let _abortController = null;
 
 export function setApiBase(origin) {
   _base = origin.replace(/\/$/, ''); // e.g. "https://sequoia.instructure.com"
+}
+
+export function abortPendingRequests() {
+  if (_abortController) {
+    _abortController.abort();
+    _abortController = null;
+  }
 }
 
 /** Extract courseId from the current page URL. */
@@ -24,16 +33,37 @@ export function getCourseId() {
 /**
  * Follow Canvas's Link header pagination and collect all pages.
  * Returns the full array of results.
+ * Supports abort via AbortController and request timeout.
  */
-async function fetchPaged(url) {
+async function fetchPaged(url, signal) {
   const results = [];
   let next = url.startsWith('http') ? url : _base + url;
 
   while (next) {
-    const res = await fetch(next, {
-      credentials: 'include',
-      headers: { Accept: 'application/json' },
-    });
+    // Create a timeout that aborts the fetch
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+    // Combine external signal (course switch) with timeout signal
+    const combinedSignal = signal
+      ? AbortSignal.any ? AbortSignal.any([signal, controller.signal]) : controller.signal
+      : controller.signal;
+
+    let res;
+    try {
+      res = await fetch(next, {
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+        signal: combinedSignal,
+      });
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        throw new Error('Request cancelled');
+      }
+      throw err;
+    }
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       throw new Error(`Canvas API ${res.status}: ${res.statusText} (${next})`);
@@ -67,32 +97,32 @@ function parseLinkNext(header) {
  *   &include[]=submission
  *   &include[]=score_statistics
  */
-export async function fetchAssignmentGroups(courseId) {
+export async function fetchAssignmentGroups(courseId, signal) {
   const url =
     `/api/v1/courses/${courseId}/assignment_groups` +
     `?include[]=assignments&include[]=submission&include[]=score_statistics` +
     `&per_page=${PER_PAGE}`;
-  return fetchPaged(url);
+  return fetchPaged(url, signal);
 }
 
 /**
  * Fetch the course object to read apply_assignment_group_weights and grading scheme.
  */
-export async function fetchCourse(courseId) {
+export async function fetchCourse(courseId, signal) {
   const url = `/api/v1/courses/${courseId}?include[]=grading_scheme`;
-  return fetchPaged(url);
+  return fetchPaged(url, signal);
 }
 
 /**
  * Fetch the student's Canvas-computed enrollment grades for discrepancy detection.
  * Returns null gracefully if unavailable.
  */
-export async function fetchEnrollmentGrade(courseId) {
+export async function fetchEnrollmentGrade(courseId, signal) {
   try {
     const url =
       `/api/v1/courses/${courseId}/enrollments` +
       `?user_id=self&type[]=StudentEnrollment&per_page=1`;
-    const list = await fetchPaged(url);
+    const list = await fetchPaged(url, signal);
     const grades = list[0]?.grades ?? null;
     return grades
       ? {
@@ -110,12 +140,12 @@ export async function fetchEnrollmentGrade(courseId) {
  * Fetch all active student enrollments with current scores.
  * Returns a sorted array of course objects annotated with currentScore / currentGrade.
  */
-export async function fetchAllCourses() {
+export async function fetchAllCourses(signal) {
   const url =
     `/api/v1/courses` +
     `?enrollment_type=student&enrollment_state=active` +
     `&include[]=total_scores&per_page=100`;
-  const courses = await fetchPaged(url);
+  const courses = await fetchPaged(url, signal);
   return courses
     .filter(c => !c.access_restricted_by_date)
     .map(c => {
@@ -134,12 +164,18 @@ export async function fetchAllCourses() {
 /**
  * Load everything needed for the grade calculation in parallel.
  * Returns { groups, isWeighted, enrollmentGrade }.
+ * Creates a new AbortController for each call; call abortPendingRequests()
+ * to cancel any in-flight loadCourseData requests.
  */
 export async function loadCourseData(courseId) {
+  abortPendingRequests();
+  _abortController = new AbortController();
+  const signal = _abortController.signal;
+
   const [groups, course, enrollmentGrade] = await Promise.all([
-    fetchAssignmentGroups(courseId),
-    fetchCourse(courseId).catch(() => null),
-    fetchEnrollmentGrade(courseId),
+    fetchAssignmentGroups(courseId, signal),
+    fetchCourse(courseId, signal).catch(() => null),
+    fetchEnrollmentGrade(courseId, signal),
   ]);
 
   const isWeighted = Boolean(course?.apply_assignment_group_weights);

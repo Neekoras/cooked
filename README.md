@@ -13,13 +13,16 @@ Canvas has a built-in "What-If Grades" tool. It lets you simulate a future score
 Click the Cooked icon in your Chrome toolbar and a native side panel slides open alongside your browser tab. It reads your Canvas session automatically and gives you:
 
 - **Your real current grade** — recalculated from raw assignment data, weighted exactly the way Canvas weights it, with drop rules applied
-- **Discrepancy detection** — flags when our calculated grade differs from Canvas's displayed grade, which usually means hidden or unposted assignments
+- **Canvas letter comparison** — shows Canvas's official letter grade alongside our calculation for easy comparison
+- **Discrepancy detection** — flags when our calculated grade differs from Canvas's displayed grade, with direction and color coding (usually means hidden/unposted assignments)
+- **Last refreshed indicator** — shows how recently your data was pulled ("just now", "2m ago")
+- **Refresh button** — manually re-fetch grades from Canvas with cache invalidation
 - **Inverse grade solver** — set a target (type `A-`, `B+`, or `87`) and every remaining assignment immediately shows the exact score you need to hit it
-- **Panic Mode** — pick the one assignment that matters (your final, your last project, your biggest exam) and see the exact score you need on that one, assuming average performance on everything else
-- **Course switcher** — view grades and jump between all your active Canvas courses without leaving the panel
+- **Panic Mode** — pick the one assignment that matters (your final, your last project, your biggest exam) and see the exact score you need on that one, assuming average performance on everything else; dropdown grouped by assignment category
+- **Course switcher** — view grades and jump between all your active Canvas courses without leaving the panel; pills show subject abbreviations (ENG, MATH, BIO) instead of course numbers
 - **GPA overview** — 4.0 scale GPA calculated across all your courses using Canvas's own letter grades
-- **Breakdown view** — every assignment group collapsed and expandable, with weights, drop rules, class averages, and missing/upcoming status shown per assignment
-- **Share Card** — generates a clean PNG image of your grade summary you can screenshot and send wherever
+- **Breakdown view** — remaining assignments sorted to top for visibility, with remaining count badges on each group header, auto-collapses when >3 groups, and shows per-group and total remaining/graded/dropped counts
+- **Share Card** — generates a clean PNG image of your grade summary with color-coded messaging and text overflow protection
 
 ---
 
@@ -76,12 +79,15 @@ Type a letter grade or percentage into the **Target grade** field. Accepted form
 - Letter grades: `A`, `A-`, `B+`, `B`, `C+`, `C`, `D`, `F`
 - Percentages: `87`, `91.5`, `79`
 
-The field resolves your input in real time — if you type `B+` it shows `87% — B+` below the input so you know exactly what you're solving for. Every remaining assignment in the Breakdown tab immediately updates to show the exact score you need.
+The field resolves your input in real time — if you type `B+` it shows `87% — B+` below the input so you know exactly what you're solving for. Every remaining assignment in the Breakdown tab immediately updates to show the exact score you need. Press **Escape** to clear the input, or click the **✕** button inside the field.
 
 ### Reading the Breakdown
 
 Each assignment group is collapsible. Inside each group you'll see every assignment with:
 
+- **Remaining assignments sorted to the top** — so inverse results and required scores are immediately visible without scrolling
+- **Remaining count** — each group header shows how many assignments are left ("3 left"), and the section title shows total remaining
+- **Auto-collapse** — groups start collapsed when there are more than 3, keeping the view manageable for courses with many categories
 - **Name and due date** — with class average shown if Canvas has score statistics
 - **Your score** — color-coded green/neutral/red based on how you performed, slightly dimmed for completed assignments
 - **Required score chip** — only appears when you've set a target. Shows the score you'd need and is color-coded:
@@ -97,7 +103,7 @@ Each row also has a subtle left border color:
 
 ### Panic Mode
 
-Go to the **Panic** tab. Select the assignment you're focused on from the dropdown — your final, your last project, whatever it is. Cooked tells you the exact score needed on that one assignment to hit your target, assuming you perform at your current average on everything else. If it's already locked in (you'd hit your target even with a 0), it says so. If it's mathematically impossible, it tells you that too and suggests adjusting your target.
+Go to the **Panic** tab. Select the assignment you're focused on from the dropdown — your final, your last project, whatever it is. The dropdown is grouped by assignment category for easier scanning. Cooked tells you the exact score needed on that one assignment to hit your target, assuming you perform at your current average on everything else. If it's already locked in (you'd hit your target even with a 0), it says so. If it's mathematically impossible, it tells you that too and suggests adjusting your target.
 
 ### Share Card
 

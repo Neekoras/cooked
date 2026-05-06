@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { percentToLetterWithScheme } from '../math/gradeEngine';
 
 function formatTimeAgo(ts) {
@@ -29,7 +30,15 @@ export default function GradeDisplay({ grade, canvasGrade, isWeighted, gradingSc
     : grade >= 70 ? 'var(--text)'
     : 'var(--red)';
 
-  const refreshedLabel = formatTimeAgo(lastRefreshed);
+  // Auto-updating time-ago label — refreshes every 30s while mounted
+  const [refreshedLabel, setRefreshedLabel] = useState(() => formatTimeAgo(lastRefreshed));
+  useEffect(() => {
+    if (!lastRefreshed) return;
+    const update = () => setRefreshedLabel(formatTimeAgo(lastRefreshed));
+    update();
+    const id = setInterval(update, 30000);
+    return () => clearInterval(id);
+  }, [lastRefreshed]);
 
   return (
     <div>

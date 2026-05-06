@@ -21,6 +21,7 @@ const AssignmentRow = React.memo(function AssignmentRow({ assignment, inverseRes
   if (isDropped) className += ' is-dropped';
   else if (graded) className += ' is-graded';
   else if (isMissing) className += ' is-missing';
+  else className += ' is-remaining';
 
   const scoreColor =
     pct === null ? 'var(--text-2)'

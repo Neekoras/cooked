@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { loadCourseData, fetchAllCourses, getCourseId, setApiBase } from '../api/canvasClient';
+import { loadCourseData, fetchAllCourses, getCourseId, setApiBase, abortPendingRequests } from '../api/canvasClient';
 import { calculateGrade, solveInverse, normalizeGradingScheme } from '../math/gradeEngine';
 import GradeDisplay from './GradeDisplay';
 import TargetInput from './TargetInput';
@@ -188,9 +188,16 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
       setUrlCourseId(m ? m[1] : null);
     }
     chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => readUrl(tab?.url));
-    const listener = (_id, info) => { if (info.url) readUrl(info.url); };
-    chrome.tabs.onUpdated.addListener(listener);
-    return () => chrome.tabs.onUpdated.removeListener(listener);
+    const updated = (_id, info) => { if (info.url) readUrl(info.url); };
+    const activated = ({ tabId }) => {
+      chrome.tabs.get(tabId, (tab) => readUrl(tab?.url));
+    };
+    chrome.tabs.onUpdated.addListener(updated);
+    chrome.tabs.onActivated.addListener(activated);
+    return () => {
+      chrome.tabs.onUpdated.removeListener(updated);
+      chrome.tabs.onActivated.removeListener(activated);
+    };
   }, [embedded]);
 
   // Navigation

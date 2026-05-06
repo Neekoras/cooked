@@ -453,6 +453,7 @@
 .ck-assignment:hover           { background: rgba(240,237,230,0.035); }
 .ck-assignment.is-graded       { opacity: 0.65; border-left-color: rgba(74,171,122,0.18); }
 .ck-assignment.is-graded:hover { opacity: 0.82; }
+.ck-assignment.is-remaining    { border-left-color: rgba(200,154,44,0.25); }
 .ck-assignment.is-missing      { border-left-color: rgba(209,69,69,0.55); }
 .ck-assignment.is-dropped      { opacity: 0.25; }
 
@@ -801,4 +802,21 @@
 .ck-mono {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';
+}
+
+/* ─── Reduced motion ──────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .ck-spinner { animation-duration: 0s; }
+  .ck-panel   { transition-duration: 0s; }
+  .ck-tab     { transition-duration: 0s; }
+  .ck-assignment,
+  .ck-group-header,
+  .ck-quick-btn,
+  .ck-tab-btn,
+  .ck-btn,
+  .ck-courses-btn,
+  .ck-refresh-btn,
+  .ck-input {
+    transition-duration: 0s;
+  }
 }
