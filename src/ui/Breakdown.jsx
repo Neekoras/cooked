@@ -25,8 +25,8 @@ const AssignmentRow = React.memo(function AssignmentRow({ assignment, inverseRes
 
   const scoreColor =
     pct === null ? 'var(--text-2)'
-    : pct >= 90   ? 'var(--green)'
-    : pct >= 70   ? 'var(--text)'
+    : pct >= 80   ? 'var(--green)'
+    : pct >= 60   ? 'var(--text)'
     : 'var(--red)';
 
   // Right-side content for ungraded assignments
@@ -94,8 +94,8 @@ const GroupSection = React.memo(function GroupSection({ group, inverseMap, start
 
   const scoreColor =
     score.percent === null ? 'var(--text-3)'
-    : score.percent >= 90  ? 'var(--green)'
-    : score.percent >= 70  ? 'var(--text)'
+    : score.percent >= 80  ? 'var(--green)'
+    : score.percent >= 60  ? 'var(--text)'
     : 'var(--red)';
 
   const allAssignments = (group.assignments || []).filter(

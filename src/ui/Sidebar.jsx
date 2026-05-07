@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { loadCourseData, fetchAllCourses, getCourseId, setApiBase, abortPendingRequests } from '../api/canvasClient';
+import { loadCourseData, fetchAllCourses, getCourseId, setApiBase } from '../api/canvasClient';
 import { calculateGrade, solveInverse, normalizeGradingScheme } from '../math/gradeEngine';
 import GradeDisplay from './GradeDisplay';
 import TargetInput from './TargetInput';
@@ -215,7 +215,6 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
   // Tracks the latest load request to discard stale responses on fast switching
   const loadRequestRef = useRef(0);
   // Timestamp of last successful data load
-  const [lastRefreshed, setLastRefreshed] = useState(null);
   const [courseData, setCourseData] = useState({
     status: 'idle',
     groups: null,
@@ -264,7 +263,6 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
         const entry = { groups, isWeighted, enrollmentGrade, gradingScheme: normalizeGradingScheme(gradingScheme) };
         courseCache.current[activeCourseId] = entry;
         setCourseData({ ...entry, status: 'ready', error: null });
-        setLastRefreshed(Date.now());
       })
       .catch(err => {
         if (requestId !== loadRequestRef.current) return;
@@ -295,7 +293,6 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
         const entry = { groups, isWeighted, enrollmentGrade, gradingScheme: normalizeGradingScheme(gradingScheme) };
         courseCache.current[activeCourseId] = entry;
         setCourseData({ ...entry, status: 'ready', error: null });
-        setLastRefreshed(Date.now());
       })
       .catch(err => {
         if (requestId !== loadRequestRef.current) return;
@@ -422,7 +419,6 @@ export default function Sidebar({ isOpen = true, onToggle, embedded = false }) {
               canvasGrade={courseData.enrollmentGrade}
               isWeighted={courseData.isWeighted}
               gradingScheme={courseData.gradingScheme}
-              lastRefreshed={lastRefreshed}
             />
           )}
         </div>
